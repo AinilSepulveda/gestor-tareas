@@ -1,0 +1,95 @@
+/* ============================================================
+   Gestor de Tareas Colaborativo — Estilos Personalizados
+   ============================================================ */
+
+:root {
+  --azul-primario: #2563eb;
+  --azul-oscuro:   #1d4ed8;
+  --gris-fondo:    #f1f5f9;
+  --texto-dark:    #1e293b;
+  --borde:         #e2e8f0;
+  --sombra:        0 1px 3px rgba(0,0,0,.1);
+  --radio:         .5rem;
+}
+
+/* ── Layout general ── */
+body {
+  background-color: var(--gris-fondo);
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  color: var(--texto-dark);
+  min-height: 100vh;
+}
+
+/* ── Barra de navegación ── */
+.navbar-brand { font-weight: 700; letter-spacing: -.5px; }
+.navbar { box-shadow: 0 2px 8px rgba(0,0,0,.12); }
+
+/* ── Cards ── */
+.card {
+  border: 1px solid var(--borde);
+  border-radius: var(--radio);
+  box-shadow: var(--sombra);
+}
+
+/* ── Tarjetas de estadística ── */
+.stat-card {
+  border-left: 4px solid var(--azul-primario);
+  transition: transform .2s;
+}
+.stat-card:hover { transform: translateY(-2px); }
+.stat-card.pendiente  { border-left-color: #f59e0b; }
+.stat-card.progreso   { border-left-color: #3b82f6; }
+.stat-card.completada { border-left-color: #10b981; }
+.stat-card.cancelada  { border-left-color: #ef4444; }
+
+/* ── Badges de estado y prioridad ── */
+.badge-pendiente  { background-color: #fef3c7; color: #92400e; }
+.badge-en_progreso{ background-color: #dbeafe; color: #1e40af; }
+.badge-completada { background-color: #d1fae5; color: #065f46; }
+.badge-cancelada  { background-color: #fee2e2; color: #991b1b; }
+.badge-baja    { background-color: #e0f2fe; color: #075985; }
+.badge-media   { background-color: #fef9c3; color: #854d0e; }
+.badge-alta    { background-color: #ffedd5; color: #9a3412; }
+.badge-urgente { background-color: #fce7f3; color: #9d174d; }
+
+/* ── Tabla de tareas ── */
+.tabla-tareas th { background-color: #f8fafc; font-weight: 600; font-size: .85rem; }
+.tabla-tareas tbody tr:hover { background-color: #f0f9ff; }
+
+/* ── Formularios ── */
+.form-label { font-weight: 500; }
+.invalid-feedback { font-size: .8rem; }
+
+/* ── Botón primario personalizado ── */
+.btn-primario {
+  background-color: var(--azul-primario);
+  color: #fff;
+  border: none;
+  padding: .6rem 1.4rem;
+  border-radius: var(--radio);
+  font-weight: 500;
+  transition: background-color .2s;
+}
+.btn-primario:hover { background-color: var(--azul-oscuro); }
+
+/* ── Loader spinner ── */
+#loader {
+  position: fixed; inset: 0;
+  background: rgba(255,255,255,.75);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 9999;
+}
+
+/* ── Alertas flotantes ── */
+#alerta-container {
+  position: fixed;
+  top: 1rem; right: 1rem;
+  z-index: 10000;
+  max-width: 340px;
+}
+
+/* ── Responsivo ── */
+@media (max-width: 576px) {
+  .tabla-tareas { font-size: .78rem; }
+  .stat-card    { margin-bottom: .75rem; }
+}

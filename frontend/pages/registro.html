@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Registro — GestorTareas</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"/>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet"/>
+  <link href="../css/estilos.css" rel="stylesheet"/>
+</head>
+<body class="d-flex flex-column min-vh-100 justify-content-center bg-light">
+<div id="loader" style="display:none"><div class="spinner-border text-primary" role="status"></div></div>
+<div id="alerta-container"></div>
+<div class="container">
+  <div class="row justify-content-center">
+    <div class="col-sm-10 col-md-8 col-lg-6">
+      <div class="text-center mb-4">
+        <div class="bg-success text-white rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width:64px;height:64px;">
+          <i class="bi bi-person-plus fs-3"></i>
+        </div>
+        <h1 class="h4 fw-bold">Crear cuenta</h1>
+        <p class="text-muted">Únete al equipo de GestorTareas</p>
+      </div>
+      <div class="card shadow-sm">
+        <div class="card-body p-4">
+          <form id="form-registro" novalidate>
+            <div class="mb-3">
+              <label class="form-label" for="nombre">Nombre completo <span class="text-danger">*</span></label>
+              <div class="input-group">
+                <span class="input-group-text"><i class="bi bi-person"></i></span>
+                <input type="text" class="form-control" id="nombre" placeholder="Juan Pérez" required minlength="2" maxlength="100"/>
+                <div class="invalid-feedback">El nombre debe tener al menos 2 caracteres.</div>
+              </div>
+            </div>
+            <div class="mb-3">
+              <label class="form-label" for="email">Correo electrónico <span class="text-danger">*</span></label>
+              <div class="input-group">
+                <span class="input-group-text"><i class="bi bi-envelope"></i></span>
+                <input type="email" class="form-control" id="email" placeholder="usuario@correo.cl" required autocomplete="email"/>
+                <div class="invalid-feedback">Ingresa un email válido.</div>
+              </div>
+            </div>
+            <div class="mb-3">
+              <label class="form-label" for="password">Contraseña <span class="text-danger">*</span></label>
+              <div class="input-group">
+                <span class="input-group-text"><i class="bi bi-lock"></i></span>
+                <input type="password" class="form-control" id="password" placeholder="Mínimo 6 caracteres" required minlength="6"/>
+              </div>
+              <div class="form-text">La contraseña debe tener al menos 6 caracteres.</div>
+            </div>
+            <div class="mb-4">
+              <label class="form-label" for="confirmar-password">Confirmar contraseña <span class="text-danger">*</span></label>
+              <div class="input-group">
+                <span class="input-group-text"><i class="bi bi-lock-fill"></i></span>
+                <input type="password" class="form-control" id="confirmar-password" placeholder="Repite la contraseña" required/>
+              </div>
+            </div>
+            <div class="d-grid">
+              <button type="submit" class="btn btn-success btn-lg">
+                <i class="bi bi-person-check me-2"></i>Crear Cuenta
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+      <p class="text-center mt-3 text-muted">
+        ¿Ya tienes cuenta? <a href="login.html" class="text-primary fw-semibold">Inicia sesión</a>
+      </p>
+      <p class="text-center"><a href="../index.html" class="text-muted small"><i class="bi bi-arrow-left me-1"></i>Volver al Dashboard</a></p>
+    </div>
+  </div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="../js/api.js"></script>
+<script src="../js/auth.js"></script>
+<script src="../js/ui.js"></script>
+<script>inicializarRegistro();</script>
+</body>
+</html>

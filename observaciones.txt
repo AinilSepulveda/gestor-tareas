@@ -1,0 +1,94 @@
+OBSERVACIONES DEL PROYECTO — GESTOR DE TAREAS COLABORATIVO
+Evaluación Final Módulo 9 — KIBERNUM IT Academy
+================================================================
+
+DESCRIPCIÓN GENERAL
+-------------------
+Sistema colaborativo de gestión de tareas con arquitectura
+cliente-servidor separada (API REST + SPA vanilla JS).
+
+DECISIONES TÉCNICAS POR MÓDULO
+--------------------------------
+
+Módulo 2 — HTML5 + CSS + Bootstrap:
+  - Se utilizó Bootstrap 5.3 para garantizar responsividad total.
+  - El dashboard (index.html) es la única página pública; login y
+    registro son accesibles desde el navbar de forma condicional.
+  - Validación de formularios combinada: HTML5 nativo (required,
+    minlength) + JavaScript custom en auth.js.
+
+Módulo 3 — Lógica JavaScript:
+  - Las funciones de validación retornan arrays de errores para
+    permitir mostrar múltiples mensajes simultáneamente.
+  - La "persistencia simulada" del módulo 3 fue superada en módulo 7
+    por Sequelize ORM; los archivos de texto no se incluyeron en la
+    entrega final, por decisión de migración progresiva.
+
+Módulo 4 — POO + fetch API externa:
+  - Clase `Usuario` con campo privado `#password` (ES2022).
+  - Clase `Administrador` extiende `Usuario` con lista de permisos.
+  - El endpoint /posts de JSONPlaceholder se consume en el dashboard
+    bajo la sección "Tareas Externas", simulando tareas importadas.
+
+Módulo 5 — PostgreSQL DDL + DML:
+  - Se utilizaron tipos ENUM nativos de PostgreSQL para estado y
+    prioridad, evitando errores de inserción con valores inválidos.
+  - Las consultas DML de ejemplo incluyen JOINs, UPDATE y estadísticas
+    por estado (GROUP BY).
+
+Módulo 6 — Express + Handlebars:
+  - Se optó por NOT usar Handlebars en la versión final (Módulo 9),
+    ya que el enunciado indica explícitamente que la vista dinámica
+    es TEMPORAL y el frontend migrará a una SPA en Módulo 9.
+  - El servidor Express sirve únicamente la API REST JSON.
+
+Módulo 7 — Sequelize ORM:
+  - Asociaciones One-to-Many con alias distinguibles:
+      tareasCreadas  (creador_id → CASCADE)
+      tareasAsignadas (asignado_id → SET NULL)
+  - Hook beforeCreate/beforeUpdate para hash bcrypt automático.
+  - toJSON() sobreescrito en el modelo Usuario para nunca exponer
+    el campo password en las respuestas JSON.
+
+Módulo 8 — API REST + JWT:
+  - Middleware `autenticar` verifica el token Bearer en cada ruta
+    protegida. Retorna 401 si el token está expirado o es inválido.
+  - Middleware `soloAdmin` verifica rol post-autenticación.
+  - El CRUD de tareas aplica control de acceso granular:
+      • cualquier usuario puede VER tareas (dashboard público)
+      • solo el creador o un admin puede EDITAR/ELIMINAR su tarea
+  - Se usa morgan en modo 'dev' para logging de peticiones HTTP.
+  - Se usa nodemon para reinicio automático en desarrollo.
+
+Módulo 9 — Integración SPA + API REST:
+  - El frontend es una SPA de múltiples páginas estáticas que NO
+    depende de ningún framework; todo con vanilla JS ES6+.
+  - El módulo api.js centraliza todas las llamadas fetch con manejo
+    de errores y adjunta el token JWT automáticamente.
+  - El estado de sesión se persiste en localStorage (token + datos
+    de usuario serializados).
+  - El dashboard es PÚBLICO: muestra tareas sin autenticación.
+    Los botones de edición/eliminación sólo aparecen si hay sesión.
+
+DIFICULTADES ENCONTRADAS
+-------------------------
+1. Manejo de rutas con mismo prefijo en Express (/tareas vs
+   /tareas/usuario/mis-tareas): la ruta específica debe registrarse
+   ANTES de la ruta con parámetro dinámico (:id) para evitar que
+   Express interprete "usuario" como un ID.
+
+2. La opción `alter: true` de sequelize.sync() puede causar pérdida
+   de datos al cambiar ENUMs. En producción se recomienda usar
+   migraciones (sequelize-cli).
+
+3. CORS en desarrollo: se configuró origin dinámico desde .env
+   (FRONTEND_URL) para apuntar al puerto de Live Server.
+
+POSIBLES MEJORAS (FUERA DE ALCANCE)
+-------------------------------------
+- Implementar refresh tokens para expiración sin logout forzado.
+- Agregar notificaciones en tiempo real (WebSockets) cuando una
+  tarea cambia de estado.
+- Paginación del lado del cliente con caché local.
+- Tests automatizados con Jest + Supertest para la API.
+- Subida de archivos adjuntos a tareas (Multer).
