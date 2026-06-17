@@ -39,12 +39,14 @@ body {
 .stat-card:hover { transform: translateY(-2px); }
 .stat-card.pendiente  { border-left-color: #f59e0b; }
 .stat-card.progreso   { border-left-color: #3b82f6; }
+.stat-card.revision   { border-left-color: #06b6d4; }
 .stat-card.completada { border-left-color: #10b981; }
 .stat-card.cancelada  { border-left-color: #ef4444; }
 
 /* ── Badges de estado y prioridad ── */
 .badge-pendiente  { background-color: #fef3c7; color: #92400e; }
 .badge-en_progreso{ background-color: #dbeafe; color: #1e40af; }
+.badge-revision   { background-color: #cffafe; color: #155e75; }
 .badge-completada { background-color: #d1fae5; color: #065f46; }
 .badge-cancelada  { background-color: #fee2e2; color: #991b1b; }
 .badge-baja    { background-color: #e0f2fe; color: #075985; }
@@ -55,6 +57,165 @@ body {
 /* ── Tabla de tareas ── */
 .tabla-tareas th { background-color: #f8fafc; font-weight: 600; font-size: .85rem; }
 .tabla-tareas tbody tr:hover { background-color: #f0f9ff; }
+
+/* Reglas actuales */
+.rules-panel {
+  background: #fff;
+  border: 1px solid var(--borde);
+  border-radius: var(--radio);
+  box-shadow: var(--sombra);
+}
+.rules-panel__header {
+  border-bottom: 1px solid var(--borde);
+  padding: 1rem 1.25rem;
+}
+.rules-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+  padding: 1rem 1.25rem;
+}
+.rules-grid h3 {
+  font-size: .9rem;
+  font-weight: 700;
+  margin-bottom: .5rem;
+}
+.rules-grid ul {
+  margin: 0;
+  padding-left: 1rem;
+  color: #475569;
+  font-size: .9rem;
+}
+
+/* Tablero de tareas */
+.kanban-board {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(200px, 1fr));
+  gap: 1rem;
+  align-items: start;
+}
+.kanban-column {
+  min-width: 0;
+  background: #f8fafc;
+  border: 1px solid var(--borde);
+  border-radius: var(--radio);
+}
+.kanban-column__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .75rem;
+  padding: .85rem 1rem;
+  border-bottom: 1px solid var(--borde);
+  font-size: .9rem;
+  font-weight: 700;
+}
+.kanban-column__body {
+  display: grid;
+  gap: 1rem;
+  padding: 1rem;
+}
+.kanban-empty,
+.empty-board {
+  color: #64748b;
+  font-size: .86rem;
+  text-align: center;
+  padding: 1rem;
+}
+.empty-board {
+  grid-column: 1 / -1;
+  background: #fff;
+  border: 1px dashed var(--borde);
+  border-radius: var(--radio);
+}
+.task-card {
+  background: #fff;
+  border: 1px solid var(--borde);
+  border-radius: var(--radio);
+  overflow: hidden;
+}
+.task-card__body {
+  padding: 1rem;
+}
+.task-card__title {
+  font-size: 1rem;
+  line-height: 1.35;
+  font-weight: 700;
+  margin: 0;
+}
+.task-card__description {
+  color: #475569;
+  font-size: .9rem;
+  margin: .75rem 0 0;
+}
+.task-card__meta,
+.nota-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .35rem .75rem;
+  color: #64748b;
+  font-size: .78rem;
+}
+.task-card__meta {
+  margin-top: .8rem;
+}
+.task-card__badges,
+.task-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .5rem;
+  margin-top: .75rem;
+}
+.task-notes {
+  background: #f8fafc;
+  border-top: 1px solid var(--borde);
+  padding: .8rem 1rem 1rem;
+}
+.task-notes--collapsed {
+  padding: .75rem 1rem;
+}
+.task-notes__title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .75rem;
+  color: #475569;
+  font-size: .78rem;
+  font-weight: 700;
+  margin-bottom: .6rem;
+  text-transform: uppercase;
+}
+.nota-item {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: .4rem;
+  padding: .65rem;
+}
+.nota-item + .nota-item,
+.nota-form {
+  margin-top: .6rem;
+}
+.nota-texto {
+  color: #334155;
+  font-size: .88rem;
+  white-space: pre-wrap;
+}
+.nota-meta {
+  justify-content: space-between;
+  margin-top: .5rem;
+}
+.nota-actions {
+  display: flex;
+  gap: .55rem;
+}
+.nota-empty {
+  color: #64748b;
+  font-size: .84rem;
+}
+.nota-form {
+  display: grid;
+  gap: .5rem;
+}
 
 /* ── Formularios ── */
 .form-label { font-weight: 500; }
@@ -92,4 +253,10 @@ body {
 @media (max-width: 576px) {
   .tabla-tareas { font-size: .78rem; }
   .stat-card    { margin-bottom: .75rem; }
+  .rules-grid { grid-template-columns: 1fr; }
+  .kanban-board { grid-template-columns: 1fr; }
+}
+
+@media (min-width: 577px) and (max-width: 1199px) {
+  .kanban-board { grid-template-columns: repeat(2, minmax(240px, 1fr)); }
 }

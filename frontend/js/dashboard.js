@@ -1,94 +1,145 @@
 /**
- * dashboard.js — Lógica del dashboard principal
- * Módulo 4: Consume API de JSONPlaceholder y API REST propia
- * Módulo 8: Consume API REST con JWT
+ * Dashboard principal:
+ * - carga tareas y estadisticas
+ * - renderiza el tablero por estado
+ * - coordina el modal de tareas
  */
+
+const LIMITE = 8;
+const ESTADOS_TAREA = [
+  { id: 'pendiente', etiqueta: 'Pendiente' },
+  { id: 'en_progreso', etiqueta: 'En Progreso' },
+  { id: 'revision', etiqueta: 'Revision' },
+  { id: 'completada', etiqueta: 'Completada' },
+  { id: 'cancelada', etiqueta: 'Cancelada' },
+];
 
 let tareasCache = [];
 let paginaActual = 1;
-const LIMITE = 8;
 
-/**
- * Carga las estadísticas de tareas
- */
+const $ = (id) => document.getElementById(id);
+
+const obtenerTareaCache = (id) => tareasCache.find(tarea => tarea.id === id);
+
 const cargarEstadisticas = async () => {
   try {
     const respuesta = await tareas.listar('limit=1000');
     const todas = respuesta.datos.tareas;
+    const conteo = { pendiente: 0, en_progreso: 0, revision: 0, completada: 0, cancelada: 0 };
 
-    const conteo = { pendiente: 0, en_progreso: 0, completada: 0, cancelada: 0 };
-    todas.forEach(t => {
-      if (conteo[t.estado] !== undefined) conteo[t.estado]++;
+    todas.forEach(tarea => {
+      if (conteo[tarea.estado] !== undefined) conteo[tarea.estado]++;
     });
 
-    document.getElementById('stat-total').textContent     = todas.length;
-    document.getElementById('stat-pendiente').textContent = conteo.pendiente;
-    document.getElementById('stat-progreso').textContent  = conteo.en_progreso;
-    document.getElementById('stat-completada').textContent= conteo.completada;
+    $('stat-total').textContent = todas.length;
+    $('stat-pendiente').textContent = conteo.pendiente;
+    $('stat-progreso').textContent = conteo.en_progreso;
+    $('stat-revision').textContent = conteo.revision;
+    $('stat-completada').textContent = conteo.completada;
   } catch (error) {
-    console.error('Error al cargar estadísticas:', error);
+    console.error('Error al cargar estadisticas:', error);
   }
 };
 
-/**
- * Renderiza la tabla de tareas
- */
-const renderizarTabla = (listaTareas) => {
-  const tbody = document.getElementById('tabla-tareas-body');
-  if (!tbody) return;
+const renderizarAccionesTarea = (tarea, usuario) => {
+  if (!estaAutenticado()) return '<span class="text-muted small">Solo lectura</span>';
+
+  const acciones = [];
+  if (puedeAbrirEditorTarea(tarea, usuario)) {
+    acciones.push(`
+      <button class="btn btn-sm btn-outline-primary" onclick="abrirModalEditar(${tarea.id})" title="Editar">
+        <i class="bi bi-pencil"></i>
+      </button>
+    `);
+  }
+
+  if (puedeEliminarTarea(usuario)) {
+    acciones.push(`
+      <button class="btn btn-sm btn-outline-danger" onclick="confirmarEliminar(${tarea.id})" title="Eliminar">
+        <i class="bi bi-trash"></i>
+      </button>
+    `);
+  }
+
+  return acciones.length ? acciones.join('') : '<span class="text-muted small">Sin acciones</span>';
+};
+
+const renderizarTarjetaTarea = (tarea, notasTarea, usuario) => `
+  <article class="task-card">
+    <div class="task-card__body">
+      <div class="d-flex justify-content-between align-items-start gap-2">
+        <h3 class="task-card__title">${escaparHtml(tarea.titulo)}</h3>
+        ${badgePrioridad(tarea.prioridad)}
+      </div>
+      ${tarea.descripcion ? `<p class="task-card__description">${escaparHtml(tarea.descripcion)}</p>` : ''}
+      <div class="task-card__meta">
+        <span><i class="bi bi-person me-1"></i>${tarea.asignado ? escaparHtml(tarea.asignado.nombre) : 'Sin asignar'}</span>
+        <span><i class="bi bi-calendar-event me-1"></i>${formatearFecha(tarea.fecha_vencimiento)}</span>
+      </div>
+      <div class="task-card__badges">
+        ${badgeEstado(tarea.estado)}
+      </div>
+      <div class="task-card__actions">
+        ${renderizarAccionesTarea(tarea, usuario)}
+      </div>
+    </div>
+    ${renderizarNotas(tarea, notasTarea, usuario)}
+  </article>
+`;
+
+const renderizarTablero = async (listaTareas) => {
+  const tablero = $('tablero-tareas');
+  if (!tablero) return;
 
   if (listaTareas.length === 0) {
-    tbody.innerHTML = `
-      <tr>
-        <td colspan="6" class="text-center text-muted py-4">
-          <i class="bi bi-inbox fs-3 d-block mb-2"></i>
-          No hay tareas que mostrar.
-        </td>
-      </tr>`;
+    tablero.innerHTML = `
+      <div class="empty-board">
+        <i class="bi bi-inbox fs-3 d-block mb-2"></i>
+        No hay tareas que mostrar.
+      </div>`;
     return;
   }
 
-  const usuario = obtenerUsuarioActual();
+  const usuario = usuarioActual();
+  const notasCargadas = await Promise.all(listaTareas.map(tarea => cargarNotasTarea(tarea.id)));
+  const tareasConNotas = listaTareas.map((tarea, index) => ({
+    tarea,
+    notas: notasCargadas[index],
+  }));
 
-  tbody.innerHTML = listaTareas.map(t => `
-    <tr>
-      <td><strong>${t.titulo}</strong></td>
-      <td>${badgeEstado(t.estado)}</td>
-      <td>${badgePrioridad(t.prioridad)}</td>
-      <td>${t.asignado ? t.asignado.nombre : '<span class="text-muted">Sin asignar</span>'}</td>
-      <td>${formatearFecha(t.fecha_vencimiento)}</td>
-      <td>
-        ${estaAutenticado() ? `
-          <button class="btn btn-sm btn-outline-primary me-1" onclick="abrirModalEditar(${t.id})" title="Editar">
-            <i class="bi bi-pencil"></i>
-          </button>
-          <button class="btn btn-sm btn-outline-danger" onclick="confirmarEliminar(${t.id})" title="Eliminar">
-            <i class="bi bi-trash"></i>
-          </button>
-        ` : '<span class="text-muted small">—</span>'}
-      </td>
-    </tr>
-  `).join('');
+  tablero.innerHTML = ESTADOS_TAREA.map(estado => {
+    const tareasEstado = tareasConNotas.filter(item => item.tarea.estado === estado.id);
+    const tarjetas = tareasEstado.length
+      ? tareasEstado.map(item => renderizarTarjetaTarea(item.tarea, item.notas, usuario)).join('')
+      : '<div class="kanban-empty">No hay tareas en este estado.</div>';
+
+    return `
+      <section class="kanban-column kanban-column--${estado.id}">
+        <div class="kanban-column__header">
+          <span>${estado.etiqueta}</span>
+          <span class="badge rounded-pill bg-light text-dark">${tareasEstado.length}</span>
+        </div>
+        <div class="kanban-column__body">${tarjetas}</div>
+      </section>
+    `;
+  }).join('');
 };
 
-/**
- * Carga y muestra tareas desde la API propia
- */
 const cargarTareas = async (pagina = 1) => {
   try {
     mostrarLoader(true);
-    const estado    = document.getElementById('filtro-estado')?.value || '';
-    const prioridad = document.getElementById('filtro-prioridad')?.value || '';
+    const estado = $('filtro-estado')?.value || '';
+    const prioridad = $('filtro-prioridad')?.value || '';
 
     let params = `page=${pagina}&limit=${LIMITE}`;
-    if (estado)    params += `&estado=${estado}`;
+    if (estado) params += `&estado=${estado}`;
     if (prioridad) params += `&prioridad=${prioridad}`;
 
     const respuesta = await tareas.listar(params);
     tareasCache = respuesta.datos.tareas;
     paginaActual = pagina;
 
-    renderizarTabla(tareasCache);
+    await renderizarTablero(tareasCache);
     renderizarPaginacion(respuesta.datos.paginacion);
   } catch (error) {
     mostrarAlerta('Error al cargar las tareas.', 'danger');
@@ -97,12 +148,12 @@ const cargarTareas = async (pagina = 1) => {
   }
 };
 
-/**
- * Renderiza controles de paginación
- */
-const renderizarPaginacion = ({ pagina, totalPaginas }) => {
-  const nav = document.getElementById('paginacion');
-  if (!nav || totalPaginas <= 1) { if (nav) nav.innerHTML = ''; return; }
+const renderizarPaginacion = ({ pagina, totalPaginas } = {}) => {
+  const nav = $('paginacion');
+  if (!nav || !totalPaginas || totalPaginas <= 1) {
+    if (nav) nav.innerHTML = '';
+    return;
+  }
 
   let html = '';
   for (let i = 1; i <= totalPaginas; i++) {
@@ -113,12 +164,8 @@ const renderizarPaginacion = ({ pagina, totalPaginas }) => {
   nav.innerHTML = `<ul class="pagination pagination-sm justify-content-center mb-0">${html}</ul>`;
 };
 
-/**
- * Carga tareas desde JSONPlaceholder (Módulo 4)
- * Simula que los posts son tareas externas
- */
 const cargarTareasExternas = async () => {
-  const contenedor = document.getElementById('tareas-externas');
+  const contenedor = $('tareas-externas');
   if (!contenedor) return;
 
   try {
@@ -127,8 +174,8 @@ const cargarTareasExternas = async () => {
       <div class="col-md-6 col-lg-4 mb-3">
         <div class="card h-100">
           <div class="card-body">
-            <h6 class="card-title text-capitalize">${post.title.substring(0, 50)}...</h6>
-            <p class="card-text text-muted small">${post.body.substring(0, 80)}...</p>
+            <h6 class="card-title text-capitalize">${escaparHtml(post.title.substring(0, 50))}...</h6>
+            <p class="card-text text-muted small">${escaparHtml(post.body.substring(0, 80))}...</p>
             <span class="badge bg-secondary">JSONPlaceholder #${post.id}</span>
           </div>
         </div>
@@ -140,97 +187,154 @@ const cargarTareasExternas = async () => {
 };
 
 const resetearFormularioTarea = () => {
-  document.getElementById('tarea-id').value = '';
-  document.getElementById('tarea-titulo').value = '';
-  document.getElementById('tarea-descripcion').value = '';
-  document.getElementById('tarea-estado').value = 'pendiente';
-  document.getElementById('tarea-prioridad').value = 'media';
-  document.getElementById('tarea-vencimiento').value = '';
-  document.getElementById('tarea-asignado').value = '';
+  $('tarea-id').value = '';
+  $('tarea-titulo').value = '';
+  $('tarea-descripcion').value = '';
+  $('tarea-estado').value = 'pendiente';
+  $('tarea-prioridad').value = 'media';
+  $('tarea-vencimiento').value = '';
+  $('tarea-asignado').value = '';
 };
 
-/**
- * Abre el modal para crear una nueva tarea
- */
+const setControl = (id, disabled) => {
+  const control = $(id);
+  if (control) control.disabled = disabled;
+};
+
+const configurarOpcionesEstado = (tarea = null) => {
+  const select = $('tarea-estado');
+  if (!select) return;
+
+  const usuario = usuarioActual();
+  const estados = esAdmin(usuario)
+    ? ESTADOS_TAREA
+    : ESTADOS_TAREA.filter(estado => ['pendiente', 'en_progreso', 'revision'].includes(estado.id));
+
+  const valorActual = tarea?.estado || select.value || 'pendiente';
+  select.innerHTML = estados
+    .map(estado => `<option value="${estado.id}">${estado.etiqueta}</option>`)
+    .join('');
+  select.value = estados.some(estado => estado.id === valorActual) ? valorActual : 'revision';
+};
+
+const aplicarPermisosFormulario = (tarea = null) => {
+  const usuario = usuarioActual();
+  const admin = esAdmin(usuario);
+  const creando = !tarea;
+  const puedeGuardar = creando ? puedeCrearTarea(usuario) : puedeAbrirEditorTarea(tarea, usuario);
+
+  configurarOpcionesEstado(tarea);
+  setControl('tarea-titulo', !admin);
+  setControl('tarea-descripcion', !admin);
+  setControl('tarea-prioridad', !admin);
+  setControl('tarea-vencimiento', !admin);
+  setControl('tarea-asignado', !puedeAsignarTarea(usuario));
+  setControl('tarea-estado', creando || !puedeCambiarEstadoTarea(tarea || {}, usuario));
+
+  const grupoAsignado = $('tarea-asignado')?.closest('.col-md-6');
+  if (grupoAsignado) grupoAsignado.style.display = admin ? '' : 'none';
+
+  const btnGuardar = $('btn-guardar-tarea');
+  if (btnGuardar) btnGuardar.style.display = puedeGuardar ? 'inline-block' : 'none';
+};
+
+const cargarUsuariosEnSelect = async () => {
+  const select = $('tarea-asignado');
+  if (!select) return;
+
+  select.innerHTML = '<option value="">Selecciona usuario</option>';
+  if (!puedeAsignarTarea()) return;
+
+  try {
+    const resp = await usuarios.listar();
+    const usuariosAsignables = resp.datos.usuarios;
+
+    if (!usuariosAsignables.length) {
+      select.innerHTML = '<option value="">No hay usuarios registrados</option>';
+      return;
+    }
+
+    select.innerHTML += usuariosAsignables
+      .map(usuario => `<option value="${usuario.id}">${escaparHtml(usuario.nombre)}</option>`)
+      .join('');
+  } catch {
+    select.innerHTML = '<option value="">No se pudieron cargar usuarios</option>';
+  }
+};
+
 const abrirModalCrear = async () => {
-  if (!estaAutenticado()) {
-    mostrarAlerta('Debes iniciar sesión para crear tareas.', 'warning');
+  if (!puedeCrearTarea()) {
+    mostrarAlerta('Solo un administrador puede crear tareas.', 'warning');
     return;
   }
+
   await cargarUsuariosEnSelect();
-  document.getElementById('modal-titulo').textContent = 'Nueva Tarea';
   resetearFormularioTarea();
-  const modal = new bootstrap.Modal(document.getElementById('modal-tarea'));
-  modal.show();
+  aplicarPermisosFormulario();
+  $('modal-titulo').textContent = 'Nueva Tarea';
+  new bootstrap.Modal($('modal-tarea')).show();
 };
 
-/**
- * Abre el modal para editar una tarea existente
- */
 const abrirModalEditar = async (id) => {
-  if (!estaAutenticado()) return;
+  const tareaCache = obtenerTareaCache(id);
+  if (tareaCache && !puedeAbrirEditorTarea(tareaCache)) {
+    mostrarAlerta('No tienes permiso para editar esta tarea.', 'warning');
+    return;
+  }
+
   try {
     mostrarLoader(true);
     await cargarUsuariosEnSelect();
+
     const resp = await tareas.obtener(id);
-    const t = resp.datos.tarea;
+    const tarea = resp.datos.tarea;
 
-    document.getElementById('modal-titulo').textContent = 'Editar Tarea';
-    document.getElementById('tarea-id').value = t.id;
-    document.getElementById('tarea-titulo').value = t.titulo;
-    document.getElementById('tarea-descripcion').value = t.descripcion || '';
-    document.getElementById('tarea-estado').value = t.estado;
-    document.getElementById('tarea-prioridad').value = t.prioridad;
-    document.getElementById('tarea-vencimiento').value = t.fecha_vencimiento || '';
-    document.getElementById('tarea-asignado').value = t.asignado_id || '';
+    $('modal-titulo').textContent = 'Editar Tarea';
+    $('tarea-id').value = tarea.id;
+    $('tarea-titulo').value = tarea.titulo;
+    $('tarea-descripcion').value = tarea.descripcion || '';
+    $('tarea-estado').value = tarea.estado;
+    $('tarea-prioridad').value = tarea.prioridad;
+    $('tarea-vencimiento').value = tarea.fecha_vencimiento || '';
+    $('tarea-asignado').value = tarea.asignado_id || '';
 
-    const modal = new bootstrap.Modal(document.getElementById('modal-tarea'));
-    modal.show();
+    aplicarPermisosFormulario(tarea);
+    new bootstrap.Modal($('modal-tarea')).show();
   } catch (error) {
-    mostrarAlerta('Error al cargar la tarea.', 'danger');
+    mostrarAlerta(error.mensaje || 'Error al cargar la tarea.', 'danger');
   } finally {
     mostrarLoader(false);
   }
 };
 
-/**
- * Carga los usuarios en el select del formulario de tarea
- */
-const cargarUsuariosEnSelect = async () => {
-  const select = document.getElementById('tarea-asignado');
-  if (!select) return;
-  select.innerHTML = '<option value="">Sin asignar</option>';
+const datosTareaDesdeFormulario = () => ({
+  titulo: $('tarea-titulo').value.trim(),
+  descripcion: $('tarea-descripcion').value.trim(),
+  estado: $('tarea-estado').value,
+  prioridad: $('tarea-prioridad').value,
+  fecha_vencimiento: $('tarea-vencimiento').value || null,
+  asignado_id: $('tarea-asignado').value || null,
+});
 
-  const usuario = obtenerUsuarioActual();
-  if (!usuario?.esAdministrador()) return;
-
-  try {
-    const resp = await usuarios.listar();
-    select.innerHTML +=
-      resp.datos.usuarios.map(u =>
-        `<option value="${u.id}">${u.nombre}</option>`
-      ).join('');
-  } catch {
-    select.innerHTML = '<option value="">Sin asignar</option>';
-  }
-};
-
-/**
- * Guarda la tarea (crea o actualiza)
- */
 const guardarTarea = async () => {
-  const id = document.getElementById('tarea-id').value;
-  const datos = {
-    titulo:           document.getElementById('tarea-titulo').value.trim(),
-    descripcion:      document.getElementById('tarea-descripcion').value.trim(),
-    estado:           document.getElementById('tarea-estado').value,
-    prioridad:        document.getElementById('tarea-prioridad').value,
-    fecha_vencimiento:document.getElementById('tarea-vencimiento').value || null,
-    asignado_id:      document.getElementById('tarea-asignado').value || null,
-  };
+  const usuario = usuarioActual();
+  const id = $('tarea-id').value;
+  const datos = esAdmin(usuario)
+    ? datosTareaDesdeFormulario()
+    : { estado: $('tarea-estado').value };
 
-  if (!datos.titulo || datos.titulo.length < 3) {
-    mostrarAlerta('El título debe tener al menos 3 caracteres.', 'warning');
+  if (!id && !puedeCrearTarea(usuario)) {
+    mostrarAlerta('Solo un administrador puede crear tareas.', 'warning');
+    return;
+  }
+
+  if (esAdmin(usuario) && (!datos.titulo || datos.titulo.length < 3)) {
+    mostrarAlerta('El titulo debe tener al menos 3 caracteres.', 'warning');
+    return;
+  }
+
+  if (esAdmin(usuario) && !datos.asignado_id) {
+    mostrarAlerta('Debes asignar la tarea a un usuario.', 'warning');
     return;
   }
 
@@ -244,9 +348,8 @@ const guardarTarea = async () => {
       mostrarAlerta('Tarea creada correctamente.', 'success');
     }
 
-    bootstrap.Modal.getInstance(document.getElementById('modal-tarea')).hide();
-    await cargarTareas(paginaActual);
-    await cargarEstadisticas();
+    bootstrap.Modal.getInstance($('modal-tarea')).hide();
+    await Promise.all([cargarTareas(paginaActual), cargarEstadisticas()]);
   } catch (error) {
     mostrarAlerta(error.mensaje || 'Error al guardar la tarea.', 'danger');
   } finally {
@@ -254,17 +357,18 @@ const guardarTarea = async () => {
   }
 };
 
-/**
- * Confirma y elimina una tarea
- */
 const confirmarEliminar = async (id) => {
-  if (!confirm('¿Estás seguro de que deseas eliminar esta tarea?')) return;
+  if (!puedeEliminarTarea()) {
+    mostrarAlerta('Solo un administrador puede eliminar tareas.', 'warning');
+    return;
+  }
+  if (!confirm('Estas seguro de que deseas eliminar esta tarea?')) return;
+
   try {
     mostrarLoader(true);
     await tareas.eliminar(id);
     mostrarAlerta('Tarea eliminada correctamente.', 'success');
-    await cargarTareas(paginaActual);
-    await cargarEstadisticas();
+    await Promise.all([cargarTareas(paginaActual), cargarEstadisticas()]);
   } catch (error) {
     mostrarAlerta(error.mensaje || 'Error al eliminar la tarea.', 'danger');
   } finally {
@@ -272,30 +376,25 @@ const confirmarEliminar = async (id) => {
   }
 };
 
-/**
- * Inicialización del dashboard
- */
 document.addEventListener('DOMContentLoaded', async () => {
   actualizarNavbar();
 
-  // Mostrar botón crear solo si está autenticado
-  const btnCrear = document.getElementById('btn-crear-tarea');
+  const btnCrear = $('btn-crear-tarea');
   if (btnCrear) {
-    btnCrear.style.display = estaAutenticado() ? 'inline-block' : 'none';
+    btnCrear.style.display = puedeCrearTarea() ? 'inline-block' : 'none';
     btnCrear.addEventListener('click', abrirModalCrear);
   }
 
-  // Botón guardar tarea
-  const btnGuardar = document.getElementById('btn-guardar-tarea');
+  const btnGuardar = $('btn-guardar-tarea');
   if (btnGuardar) btnGuardar.addEventListener('click', guardarTarea);
 
-  // Filtros
   ['filtro-estado', 'filtro-prioridad'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.addEventListener('change', () => cargarTareas(1));
+    const control = $(id);
+    if (control) control.addEventListener('change', () => cargarTareas(1));
   });
 
-  // Cargar datos
+  window.addEventListener('notas:actualizadas', () => cargarTareas(paginaActual));
+
   await Promise.all([
     cargarEstadisticas(),
     cargarTareas(),

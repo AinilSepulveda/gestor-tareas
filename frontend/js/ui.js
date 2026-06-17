@@ -38,6 +38,14 @@ const limpiarAlertas = () => {
   if (container) container.innerHTML = '';
 };
 
+const escaparHtml = (valor = '') => String(valor ?? '').replace(/[&<>"']/g, (char) => ({
+  '&': '&amp;',
+  '<': '&lt;',
+  '>': '&gt;',
+  '"': '&quot;',
+  "'": '&#39;',
+}[char]));
+
 /**
  * Formatea una fecha ISO a formato legible en español
  */
@@ -55,6 +63,7 @@ const badgeEstado = (estado) => {
   const etiquetas = {
     pendiente:   'Pendiente',
     en_progreso: 'En Progreso',
+    revision:    'Revision',
     completada:  'Completada',
     cancelada:   'Cancelada',
   };

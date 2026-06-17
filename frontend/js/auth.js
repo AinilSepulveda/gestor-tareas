@@ -57,10 +57,31 @@ const obtenerUsuarioActual = () => {
   return obj.rol === 'administrador' ? new Administrador(obj) : new Usuario(obj);
 };
 
+const limpiarSesion = () => {
+  localStorage.removeItem('token');
+  localStorage.removeItem('usuario');
+};
+
+const tokenVigente = () => {
+  const token = localStorage.getItem('token');
+  if (!token) return false;
+
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    return !payload.exp || payload.exp * 1000 > Date.now();
+  } catch {
+    return false;
+  }
+};
+
 /**
  * Verifica si hay sesión activa
  */
-const estaAutenticado = () => !!localStorage.getItem('token');
+const estaAutenticado = () => {
+  if (tokenVigente()) return true;
+  limpiarSesion();
+  return false;
+};
 
 const rutaFrontend = (ruta) => {
   const enPages = window.location.pathname.includes('/pages/');
@@ -71,8 +92,7 @@ const rutaFrontend = (ruta) => {
  * Cierra la sesión actual
  */
 const cerrarSesion = () => {
-  localStorage.removeItem('token');
-  localStorage.removeItem('usuario');
+  limpiarSesion();
   window.location.href = rutaFrontend('pages/login.html');
 };
 

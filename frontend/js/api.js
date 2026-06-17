@@ -24,6 +24,9 @@ const peticion = async (url, opciones = {}) => {
     ...opciones,
   });
   const datos = await respuesta.json();
+  if (respuesta.status === 401 && typeof limpiarSesion === 'function') {
+    limpiarSesion();
+  }
   if (!respuesta.ok) throw { status: respuesta.status, ...datos };
   return datos;
 };
@@ -47,9 +50,22 @@ const tareas = {
 
 // ─── Usuarios ─────────────────────────────────────────────────────────────────
 const usuarios = {
-  listar:    ()         => peticion('/usuarios'),
+  listar:    ()         => {
+    if (!estaAutenticado()) {
+      throw { status: 401, mensaje: 'Debes iniciar sesion para cargar usuarios.' };
+    }
+    return peticion('/usuarios');
+  },
   obtener:   (id)       => peticion(`/usuarios/${id}`),
   actualizar:(id, datos)=> peticion(`/usuarios/${id}`, { method: 'PUT', body: JSON.stringify(datos) }),
+};
+
+const notas = {
+  listarPorTarea: (tareaId)        => peticion(`/notas/tarea/${tareaId}`),
+  obtener:        (id)             => peticion(`/notas/${id}`),
+  crear:          (tareaId, datos) => peticion(`/notas/tarea/${tareaId}`, { method: 'POST', body: JSON.stringify(datos) }),
+  actualizar:     (id, datos)      => peticion(`/notas/${id}`, { method: 'PUT', body: JSON.stringify(datos) }),
+  eliminar:       (id)             => peticion(`/notas/${id}`, { method: 'DELETE' }),
 };
 
 // ─── JSONPlaceholder (Módulo 4) ──────────────────────────────────────────────
