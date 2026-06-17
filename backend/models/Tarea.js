@@ -19,13 +19,17 @@ const Tarea = sequelize.define('Tarea', {
     type: DataTypes.TEXT,
     allowNull: true,
   },
+  notas: {
+    type: DataTypes.TEXT,
+    allowNull: true,
+  },
   estado: {
     type: DataTypes.STRING(20),
     defaultValue: 'pendiente',
     allowNull: false,
     validate: {
       isIn: {
-        args: [['pendiente', 'en_progreso', 'completada', 'cancelada']],
+        args: [['pendiente', 'en_progreso', 'revision', 'completada', 'cancelada']],
         msg: 'El estado no es valido.',
       },
     },

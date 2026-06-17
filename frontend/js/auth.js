@@ -62,13 +62,18 @@ const obtenerUsuarioActual = () => {
  */
 const estaAutenticado = () => !!localStorage.getItem('token');
 
+const rutaFrontend = (ruta) => {
+  const enPages = window.location.pathname.includes('/pages/');
+  return enPages ? `../${ruta}` : ruta;
+};
+
 /**
  * Cierra la sesión actual
  */
 const cerrarSesion = () => {
   localStorage.removeItem('token');
   localStorage.removeItem('usuario');
-  window.location.href = 'login.html';
+  window.location.href = rutaFrontend('pages/login.html');
 };
 
 // ─── Validaciones de formularios (Módulo 2 y 3) ──────────────────────────────
@@ -118,7 +123,7 @@ const validarFormularioLogin = ({ email, password }) => {
 const inicializarLogin = () => {
   // Si ya está autenticado, redirigir al dashboard
   if (estaAutenticado()) {
-    window.location.href = 'index.html';
+    window.location.href = rutaFrontend('index.html');
     return;
   }
 
@@ -144,7 +149,7 @@ const inicializarLogin = () => {
       mostrarLoader(true);
       const respuesta = await auth.login(datos);
       guardarSesion(respuesta.datos);
-      window.location.href = 'index.html';
+      window.location.href = rutaFrontend('index.html');
     } catch (error) {
       mostrarAlerta(error.mensaje || 'Error al iniciar sesión.', 'danger');
     } finally {
@@ -158,7 +163,7 @@ const inicializarLogin = () => {
  */
 const inicializarRegistro = () => {
   if (estaAutenticado()) {
-    window.location.href = 'index.html';
+    window.location.href = rutaFrontend('index.html');
     return;
   }
 

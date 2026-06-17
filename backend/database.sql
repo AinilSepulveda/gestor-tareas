@@ -16,7 +16,7 @@ CREATE DATABASE gestor_tareas
 -- ─── DDL: Definición de tablas ───────────────────────────────────────────────
 
 CREATE TYPE rol_usuario   AS ENUM ('administrador', 'usuario');
-CREATE TYPE estado_tarea  AS ENUM ('pendiente', 'en_progreso', 'completada', 'cancelada');
+CREATE TYPE estado_tarea  AS ENUM ('pendiente', 'en_progreso', 'revision', 'completada', 'cancelada');
 CREATE TYPE prioridad_tarea AS ENUM ('baja', 'media', 'alta', 'urgente');
 
 CREATE TABLE usuarios (
@@ -34,6 +34,7 @@ CREATE TABLE tareas (
   id                 SERIAL           PRIMARY KEY,
   titulo             VARCHAR(200)     NOT NULL CHECK (length(trim(titulo)) >= 3),
   descripcion        TEXT,
+  notas              TEXT,
   estado             estado_tarea     NOT NULL DEFAULT 'pendiente',
   prioridad          prioridad_tarea  NOT NULL DEFAULT 'media',
   fecha_vencimiento  DATE,

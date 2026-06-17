@@ -1,8 +1,10 @@
 @host = http://localhost:3000
 @baseUrl = {{host}}/api
+# Cambia @usuarioId por el ID del usuario que usa el bloque "Login".
 @usuarioId = 1
 @tareaId = 1
 @asignadoId = 2
+@usuarioDesactivarId = 999999
 
 ### Health / raiz
 GET {{host}}/
@@ -29,6 +31,32 @@ Content-Type: application/json
   "password": "123456"
 }
 
+### Registrar administrador
+# @name registroAdmin
+POST {{baseUrl}}/auth/registro
+Content-Type: application/json
+
+{
+  "nombre": "Admin Demo",
+  "email": "admin.demo@gestor.cl",
+  "password": "123456",
+  "rol": "administrador"
+}
+
+### Login administrador
+# @name loginAdmin
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "admin.demo@gestor.cl",
+  "password": "123456"
+}
+
+### Perfil administrador
+GET {{baseUrl}}/auth/perfil
+Authorization: Bearer {{loginAdmin.response.body.datos.token}}
+
 ### Perfil autenticado
 GET {{baseUrl}}/auth/perfil
 Authorization: Bearer {{login.response.body.datos.token}}
@@ -37,7 +65,7 @@ Authorization: Bearer {{login.response.body.datos.token}}
 GET {{baseUrl}}/tareas?page=1&limit=10
 
 ### Listar tareas por filtros
-GET {{baseUrl}}/tareas?estado=pendiente&prioridad=media&page=1&limit=10
+GET {{baseUrl}}/tareas?estado=revision&prioridad=media&page=1&limit=10
 
 ### Obtener tarea por ID
 GET {{baseUrl}}/tareas/{{tareaId}}
@@ -46,45 +74,94 @@ GET {{baseUrl}}/tareas/{{tareaId}}
 GET {{baseUrl}}/tareas/usuario/mis-tareas
 Authorization: Bearer {{login.response.body.datos.token}}
 
-### Crear tarea
-# @name crearTarea
+### ERROR 403 - Usuario intentando crear tarea
 POST {{baseUrl}}/tareas
 Authorization: Bearer {{login.response.body.datos.token}}
 Content-Type: application/json
 
 {
-  "titulo": "Probar backend con REST Client",
-  "descripcion": "Solicitud creada desde api.rest",
-  "estado": "pendiente",
+  "titulo": "Intento de crear tarea como usuario",
+  "descripcion": "Esto debe fallar porque solo admin crea tareas",
   "prioridad": "media",
   "fecha_vencimiento": "2026-06-30",
-  "asignado_id": null
+  "asignado_id": {{usuarioId}}
 }
 
-### Obtener tarea creada
-GET {{baseUrl}}/tareas/{{crearTarea.response.body.datos.tarea.id}}
+### ADMIN - Crear tarea asignada
+# @name crearTareaAdmin
+POST {{baseUrl}}/tareas
+Authorization: Bearer {{loginAdmin.response.body.datos.token}}
+Content-Type: application/json
 
-### Actualizar tarea creada
-PUT {{baseUrl}}/tareas/{{crearTarea.response.body.datos.tarea.id}}
+{
+  "titulo": "Revisar avance del modulo",
+  "descripcion": "Tarea creada por admin y asignada a un usuario",
+  "prioridad": "media",
+  "fecha_vencimiento": "2026-06-30",
+  "asignado_id": {{usuarioId}}
+}
+
+### Obtener tarea creada por admin
+GET {{baseUrl}}/tareas/{{crearTareaAdmin.response.body.datos.tarea.id}}
+
+### ADMIN - Editar contenido y asignacion de tarea
+PUT {{baseUrl}}/tareas/{{crearTareaAdmin.response.body.datos.tarea.id}}
+Authorization: Bearer {{loginAdmin.response.body.datos.token}}
+Content-Type: application/json
+
+{
+  "titulo": "Revisar avance del modulo actualizado",
+  "descripcion": "Contenido editado por admin",
+  "prioridad": "alta",
+  "fecha_vencimiento": "2026-07-05",
+  "asignado_id": {{usuarioId}}
+}
+
+### USUARIO - Cambiar estado a revision y agregar notas
+PUT {{baseUrl}}/tareas/{{crearTareaAdmin.response.body.datos.tarea.id}}
 Authorization: Bearer {{login.response.body.datos.token}}
 Content-Type: application/json
 
 {
-  "titulo": "Probar backend con REST Client actualizado",
-  "descripcion": "Solicitud actualizada desde api.rest",
-  "estado": "en_progreso",
-  "prioridad": "alta",
-  "fecha_vencimiento": "2026-07-05",
-  "asignado_id": null
+  "estado": "revision",
+  "notas": "Surgio un imprevisto y se deja la tarea en revision."
 }
 
-### Eliminar tarea creada
-DELETE {{baseUrl}}/tareas/{{crearTarea.response.body.datos.tarea.id}}
+### ERROR 403 - Admin intentando mover estado o notas
+PUT {{baseUrl}}/tareas/{{crearTareaAdmin.response.body.datos.tarea.id}}
+Authorization: Bearer {{loginAdmin.response.body.datos.token}}
+Content-Type: application/json
+
+{
+  "estado": "completada",
+  "notas": "Esto debe fallar porque el estado y las notas son del usuario asignado."
+}
+
+### ERROR 403 - Usuario intentando editar contenido
+PUT {{baseUrl}}/tareas/{{crearTareaAdmin.response.body.datos.tarea.id}}
 Authorization: Bearer {{login.response.body.datos.token}}
+Content-Type: application/json
+
+{
+  "titulo": "Cambio no permitido por usuario",
+  "descripcion": "Esto debe fallar porque solo admin edita contenido."
+}
+
+### ADMIN - Eliminar tarea creada
+DELETE {{baseUrl}}/tareas/{{crearTareaAdmin.response.body.datos.tarea.id}}
+Authorization: Bearer {{loginAdmin.response.body.datos.token}}
 
 ### Listar usuarios (requiere token de administrador)
 GET {{baseUrl}}/usuarios
 Authorization: Bearer {{login.response.body.datos.token}}
+
+### ADMIN - Listar usuarios
+GET {{baseUrl}}/usuarios
+Authorization: Bearer {{loginAdmin.response.body.datos.token}}
+
+### ADMIN - Obtener usuario por ID
+GET {{baseUrl}}/usuarios/{{usuarioId}}
+Authorization: Bearer {{loginAdmin.response.body.datos.token}}
 
 ### Obtener usuario por ID
 GET {{baseUrl}}/usuarios/{{usuarioId}}
@@ -101,8 +178,13 @@ Content-Type: application/json
 }
 
 ### Desactivar usuario (requiere token de administrador)
-DELETE {{baseUrl}}/usuarios/{{usuarioId}}
+DELETE {{baseUrl}}/usuarios/{{usuarioDesactivarId}}
 Authorization: Bearer {{login.response.body.datos.token}}
+
+### ADMIN - Desactivar usuario por ID
+# Cambia @usuarioDesactivarId por un usuario real solo si quieres desactivarlo.
+DELETE {{baseUrl}}/usuarios/{{usuarioDesactivarId}}
+Authorization: Bearer {{loginAdmin.response.body.datos.token}}
 
 ### ERROR 400 - Registro con datos invalidos
 POST {{baseUrl}}/auth/registro

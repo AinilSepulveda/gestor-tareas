@@ -5,7 +5,7 @@ const {
   actualizarTarea, eliminarTarea, misTareas,
 } = require('../controllers/tareasController');
 const { autenticar } = require('../middlewares/autenticacion');
-const { validarTarea } = require('../middlewares/validaciones');
+const { validarCrearTarea, validarActualizarTarea } = require('../middlewares/validaciones');
 
 // Rutas públicas (dashboard)
 router.get('/', listarTareas);
@@ -13,8 +13,8 @@ router.get('/:id', obtenerTarea);
 
 // Rutas protegidas
 router.get('/usuario/mis-tareas', autenticar, misTareas);
-router.post('/', autenticar, validarTarea, crearTarea);
-router.put('/:id', autenticar, validarTarea, actualizarTarea);
+router.post('/', autenticar, validarCrearTarea, crearTarea);
+router.put('/:id', autenticar, validarActualizarTarea, actualizarTarea);
 router.delete('/:id', autenticar, eliminarTarea);
 
 module.exports = router;

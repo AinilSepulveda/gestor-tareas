@@ -1,5 +1,8 @@
+const estadosValidos = ['pendiente', 'en_progreso', 'revision', 'completada', 'cancelada'];
+const prioridadesValidas = ['baja', 'media', 'alta', 'urgente'];
+
 /**
- * Middleware de validación para registro de usuario
+ * Middleware de validacion para registro de usuario
  */
 const validarRegistro = (req, res, next) => {
   const { nombre, email, password } = req.body;
@@ -11,11 +14,11 @@ const validarRegistro = (req, res, next) => {
 
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   if (!email || !emailRegex.test(email)) {
-    errores.push('El email no es válido.');
+    errores.push('El email no es valido.');
   }
 
   if (!password || password.length < 6) {
-    errores.push('La contraseña debe tener al menos 6 caracteres.');
+    errores.push('La contrasena debe tener al menos 6 caracteres.');
   }
 
   if (errores.length > 0) {
@@ -26,14 +29,49 @@ const validarRegistro = (req, res, next) => {
 };
 
 /**
- * Middleware de validación para login
+ * Middleware de validacion para login
  */
 const validarLogin = (req, res, next) => {
   const { email, password } = req.body;
   const errores = [];
 
   if (!email) errores.push('El email es requerido.');
-  if (!password) errores.push('La contraseña es requerida.');
+  if (!password) errores.push('La contrasena es requerida.');
+
+  if (errores.length > 0) {
+    return res.status(400).json({ exito: false, errores });
+  }
+
+  next();
+};
+
+const validarCamposTarea = (req, errores, { tituloRequerido }) => {
+  const { titulo } = req.body;
+
+  if (tituloRequerido && (!titulo || titulo.trim().length < 3)) {
+    errores.push('El titulo debe tener al menos 3 caracteres.');
+  }
+
+  if (!tituloRequerido && titulo !== undefined && titulo.trim().length < 3) {
+    errores.push('El titulo debe tener al menos 3 caracteres.');
+  }
+
+  if (req.body.estado && !estadosValidos.includes(req.body.estado)) {
+    errores.push('Estado no valido. Opciones: ' + estadosValidos.join(', '));
+  }
+
+  if (req.body.prioridad && !prioridadesValidas.includes(req.body.prioridad)) {
+    errores.push('Prioridad no valida. Opciones: ' + prioridadesValidas.join(', '));
+  }
+};
+
+/**
+ * Middleware de validacion para creacion de tarea
+ */
+const validarCrearTarea = (req, res, next) => {
+  const errores = [];
+
+  validarCamposTarea(req, errores, { tituloRequerido: true });
 
   if (errores.length > 0) {
     return res.status(400).json({ exito: false, errores });
@@ -43,24 +81,15 @@ const validarLogin = (req, res, next) => {
 };
 
 /**
- * Middleware de validación para creación/actualización de tarea
+ * Middleware de validacion para actualizacion de tarea
  */
-const validarTarea = (req, res, next) => {
-  const { titulo } = req.body;
+const validarActualizarTarea = (req, res, next) => {
   const errores = [];
 
-  if (!titulo || titulo.trim().length < 3) {
-    errores.push('El título debe tener al menos 3 caracteres.');
-  }
+  validarCamposTarea(req, errores, { tituloRequerido: false });
 
-  const estadosValidos = ['pendiente', 'en_progreso', 'completada', 'cancelada'];
-  if (req.body.estado && !estadosValidos.includes(req.body.estado)) {
-    errores.push('Estado no válido. Opciones: ' + estadosValidos.join(', '));
-  }
-
-  const prioridadesValidas = ['baja', 'media', 'alta', 'urgente'];
-  if (req.body.prioridad && !prioridadesValidas.includes(req.body.prioridad)) {
-    errores.push('Prioridad no válida. Opciones: ' + prioridadesValidas.join(', '));
+  if (Object.keys(req.body).length === 0) {
+    errores.push('Debe enviar al menos un campo para actualizar.');
   }
 
   if (errores.length > 0) {
@@ -70,4 +99,4 @@ const validarTarea = (req, res, next) => {
   next();
 };
 
-module.exports = { validarRegistro, validarLogin, validarTarea };
+module.exports = { validarRegistro, validarLogin, validarCrearTarea, validarActualizarTarea };

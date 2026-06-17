@@ -139,6 +139,16 @@ const cargarTareasExternas = async () => {
   }
 };
 
+const resetearFormularioTarea = () => {
+  document.getElementById('tarea-id').value = '';
+  document.getElementById('tarea-titulo').value = '';
+  document.getElementById('tarea-descripcion').value = '';
+  document.getElementById('tarea-estado').value = 'pendiente';
+  document.getElementById('tarea-prioridad').value = 'media';
+  document.getElementById('tarea-vencimiento').value = '';
+  document.getElementById('tarea-asignado').value = '';
+};
+
 /**
  * Abre el modal para crear una nueva tarea
  */
@@ -149,8 +159,7 @@ const abrirModalCrear = async () => {
   }
   await cargarUsuariosEnSelect();
   document.getElementById('modal-titulo').textContent = 'Nueva Tarea';
-  document.getElementById('tarea-id').value = '';
-  document.getElementById('form-tarea').reset();
+  resetearFormularioTarea();
   const modal = new bootstrap.Modal(document.getElementById('modal-tarea'));
   modal.show();
 };
@@ -190,13 +199,20 @@ const abrirModalEditar = async (id) => {
 const cargarUsuariosEnSelect = async () => {
   const select = document.getElementById('tarea-asignado');
   if (!select) return;
+  select.innerHTML = '<option value="">Sin asignar</option>';
+
+  const usuario = obtenerUsuarioActual();
+  if (!usuario?.esAdministrador()) return;
+
   try {
     const resp = await usuarios.listar();
-    select.innerHTML = '<option value="">Sin asignar</option>' +
+    select.innerHTML +=
       resp.datos.usuarios.map(u =>
         `<option value="${u.id}">${u.nombre}</option>`
       ).join('');
-  } catch { /* si no es admin, omitir */ }
+  } catch {
+    select.innerHTML = '<option value="">Sin asignar</option>';
+  }
 };
 
 /**

@@ -1,13 +1,22 @@
 const { Tarea, Usuario } = require('../models');
 const { Op } = require('sequelize');
 
-// Atributos seguros para incluir de un usuario
 const atributosUsuario = ['id', 'nombre', 'email', 'rol'];
 
-/**
- * GET /api/tareas (público - para el dashboard)
- * Lista todas las tareas con filtros opcionales
- */
+const incluirUsuarios = [
+  { model: Usuario, as: 'creador', attributes: atributosUsuario },
+  { model: Usuario, as: 'asignado', attributes: atributosUsuario },
+];
+
+const textoOpcional = (valor) => {
+  if (valor === undefined) return undefined;
+  if (valor === null || valor === '') return null;
+  if (typeof valor !== 'string') return valor;
+
+  const limpio = valor.trim();
+  return limpio === '' ? null : limpio;
+};
+
 const listarTareas = async (req, res) => {
   try {
     const { estado, prioridad, asignado_id, page = 1, limit = 10 } = req.query;
@@ -21,10 +30,7 @@ const listarTareas = async (req, res) => {
 
     const { count, rows: tareas } = await Tarea.findAndCountAll({
       where,
-      include: [
-        { model: Usuario, as: 'creador', attributes: atributosUsuario },
-        { model: Usuario, as: 'asignado', attributes: atributosUsuario },
-      ],
+      include: incluirUsuarios,
       order: [['createdAt', 'DESC']],
       limit: parseInt(limit),
       offset,
@@ -48,17 +54,10 @@ const listarTareas = async (req, res) => {
   }
 };
 
-/**
- * GET /api/tareas/:id (público)
- * Obtiene una tarea por ID
- */
 const obtenerTarea = async (req, res) => {
   try {
     const tarea = await Tarea.findByPk(req.params.id, {
-      include: [
-        { model: Usuario, as: 'creador', attributes: atributosUsuario },
-        { model: Usuario, as: 'asignado', attributes: atributosUsuario },
-      ],
+      include: incluirUsuarios,
     });
 
     if (!tarea) {
@@ -72,38 +71,45 @@ const obtenerTarea = async (req, res) => {
   }
 };
 
-/**
- * POST /api/tareas (protegido)
- * Crea una nueva tarea
- */
 const crearTarea = async (req, res) => {
   try {
-    const { titulo, descripcion, estado, prioridad, fecha_vencimiento, asignado_id } = req.body;
+    if (req.usuario.rol !== 'administrador') {
+      return res.status(403).json({
+        exito: false,
+        mensaje: 'Solo un administrador puede crear y asignar tareas.',
+      });
+    }
 
-    // Verificar que el asignado exista si se proporcionó
-    if (asignado_id) {
-      const asignado = await Usuario.findByPk(asignado_id);
-      if (!asignado) {
-        return res.status(400).json({ exito: false, mensaje: 'El usuario asignado no existe.' });
-      }
+    const { titulo, descripcion, prioridad, fecha_vencimiento, asignado_id } = req.body;
+
+    if (!asignado_id) {
+      return res.status(400).json({
+        exito: false,
+        mensaje: 'Debe asignar la tarea a un usuario.',
+      });
+    }
+
+    const asignado = await Usuario.findByPk(asignado_id);
+    if (!asignado || !asignado.activo) {
+      return res.status(400).json({
+        exito: false,
+        mensaje: 'El usuario asignado no existe o esta inactivo.',
+      });
     }
 
     const nuevaTarea = await Tarea.create({
       titulo: titulo.trim(),
-      descripcion: descripcion ? descripcion.trim() : null,
-      estado: estado || 'pendiente',
+      descripcion: textoOpcional(descripcion) || null,
+      notas: null,
+      estado: 'pendiente',
       prioridad: prioridad || 'media',
       fecha_vencimiento: fecha_vencimiento || null,
       creador_id: req.usuario.id,
-      asignado_id: asignado_id || null,
+      asignado_id,
     });
 
-    // Recargar con asociaciones
     const tareaCompleta = await Tarea.findByPk(nuevaTarea.id, {
-      include: [
-        { model: Usuario, as: 'creador', attributes: atributosUsuario },
-        { model: Usuario, as: 'asignado', attributes: atributosUsuario },
-      ],
+      include: incluirUsuarios,
     });
 
     return res.status(201).json({
@@ -121,10 +127,6 @@ const crearTarea = async (req, res) => {
   }
 };
 
-/**
- * PUT /api/tareas/:id (protegido)
- * Actualiza una tarea existente
- */
 const actualizarTarea = async (req, res) => {
   try {
     const tarea = await Tarea.findByPk(req.params.id);
@@ -133,30 +135,78 @@ const actualizarTarea = async (req, res) => {
       return res.status(404).json({ exito: false, mensaje: 'Tarea no encontrada.' });
     }
 
-    // Solo el creador o un administrador puede editar
-    if (tarea.creador_id !== req.usuario.id && req.usuario.rol !== 'administrador') {
-      return res.status(403).json({
-        exito: false,
-        mensaje: 'No tienes permiso para editar esta tarea.',
-      });
+    const { titulo, descripcion, estado, prioridad, fecha_vencimiento, asignado_id, notas } = req.body;
+    const esAdmin = req.usuario.rol === 'administrador';
+    const esAsignado = tarea.asignado_id === req.usuario.id;
+
+    if (esAdmin) {
+      if (estado !== undefined || notas !== undefined) {
+        return res.status(403).json({
+          exito: false,
+          mensaje: 'El estado y las notas las actualiza el usuario asignado.',
+        });
+      }
+
+      const cambiosAdmin = {};
+
+      if (titulo !== undefined) cambiosAdmin.titulo = titulo.trim();
+      if (descripcion !== undefined) cambiosAdmin.descripcion = textoOpcional(descripcion);
+      if (prioridad !== undefined) cambiosAdmin.prioridad = prioridad;
+      if (fecha_vencimiento !== undefined) cambiosAdmin.fecha_vencimiento = fecha_vencimiento || null;
+
+      if (asignado_id !== undefined) {
+        if (asignado_id !== null) {
+          const asignado = await Usuario.findByPk(asignado_id);
+          if (!asignado || !asignado.activo) {
+            return res.status(400).json({
+              exito: false,
+              mensaje: 'El usuario asignado no existe o esta inactivo.',
+            });
+          }
+        }
+
+        cambiosAdmin.asignado_id = asignado_id;
+      }
+
+      if (Object.keys(cambiosAdmin).length === 0) {
+        return res.status(400).json({
+          exito: false,
+          mensaje: 'El administrador debe enviar contenido o asignacion para actualizar.',
+        });
+      }
+
+      await tarea.update(cambiosAdmin);
+    } else {
+      if (!esAsignado) {
+        return res.status(403).json({
+          exito: false,
+          mensaje: 'Solo el usuario asignado puede mover el estado o agregar notas a esta tarea.',
+        });
+      }
+
+      if (titulo !== undefined || descripcion !== undefined || prioridad !== undefined || fecha_vencimiento !== undefined || asignado_id !== undefined) {
+        return res.status(403).json({
+          exito: false,
+          mensaje: 'Solo un administrador puede editar el contenido o la asignacion de la tarea.',
+        });
+      }
+
+      const cambiosUsuario = {};
+      if (estado !== undefined) cambiosUsuario.estado = estado;
+      if (notas !== undefined) cambiosUsuario.notas = textoOpcional(notas);
+
+      if (Object.keys(cambiosUsuario).length === 0) {
+        return res.status(400).json({
+          exito: false,
+          mensaje: 'Debe enviar estado o notas para actualizar la tarea.',
+        });
+      }
+
+      await tarea.update(cambiosUsuario);
     }
 
-    const { titulo, descripcion, estado, prioridad, fecha_vencimiento, asignado_id } = req.body;
-
-    await tarea.update({
-      titulo: titulo ? titulo.trim() : tarea.titulo,
-      descripcion: descripcion !== undefined ? descripcion : tarea.descripcion,
-      estado: estado || tarea.estado,
-      prioridad: prioridad || tarea.prioridad,
-      fecha_vencimiento: fecha_vencimiento !== undefined ? fecha_vencimiento : tarea.fecha_vencimiento,
-      asignado_id: asignado_id !== undefined ? asignado_id : tarea.asignado_id,
-    });
-
     const tareaActualizada = await Tarea.findByPk(tarea.id, {
-      include: [
-        { model: Usuario, as: 'creador', attributes: atributosUsuario },
-        { model: Usuario, as: 'asignado', attributes: atributosUsuario },
-      ],
+      include: incluirUsuarios,
     });
 
     return res.status(200).json({
@@ -174,10 +224,6 @@ const actualizarTarea = async (req, res) => {
   }
 };
 
-/**
- * DELETE /api/tareas/:id (protegido)
- * Elimina una tarea
- */
 const eliminarTarea = async (req, res) => {
   try {
     const tarea = await Tarea.findByPk(req.params.id);
@@ -186,11 +232,10 @@ const eliminarTarea = async (req, res) => {
       return res.status(404).json({ exito: false, mensaje: 'Tarea no encontrada.' });
     }
 
-    // Solo el creador o un administrador puede eliminar
-    if (tarea.creador_id !== req.usuario.id && req.usuario.rol !== 'administrador') {
+    if (req.usuario.rol !== 'administrador') {
       return res.status(403).json({
         exito: false,
-        mensaje: 'No tienes permiso para eliminar esta tarea.',
+        mensaje: 'Solo un administrador puede eliminar tareas.',
       });
     }
 
@@ -206,10 +251,6 @@ const eliminarTarea = async (req, res) => {
   }
 };
 
-/**
- * GET /api/tareas/mis-tareas (protegido)
- * Tareas del usuario autenticado
- */
 const misTareas = async (req, res) => {
   try {
     const tareas = await Tarea.findAll({
@@ -219,10 +260,7 @@ const misTareas = async (req, res) => {
           { asignado_id: req.usuario.id },
         ],
       },
-      include: [
-        { model: Usuario, as: 'creador', attributes: atributosUsuario },
-        { model: Usuario, as: 'asignado', attributes: atributosUsuario },
-      ],
+      include: incluirUsuarios,
       order: [['createdAt', 'DESC']],
     });
 
