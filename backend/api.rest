@@ -1,0 +1,154 @@
+@host = http://localhost:3000
+@baseUrl = {{host}}/api
+@usuarioId = 1
+@tareaId = 1
+@asignadoId = 2
+
+### Health / raiz
+GET {{host}}/
+
+### Registrar usuario
+# @name registro
+POST {{baseUrl}}/auth/registro
+Content-Type: application/json
+
+{
+  "nombre": "Usuario Demo",
+  "email": "demo@gestor.cl",
+  "password": "123456",
+  "rol": "usuario"
+}
+
+### Login
+# @name login
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "demo@gestor.cl",
+  "password": "123456"
+}
+
+### Perfil autenticado
+GET {{baseUrl}}/auth/perfil
+Authorization: Bearer {{login.response.body.datos.token}}
+
+### Listar tareas publicas
+GET {{baseUrl}}/tareas?page=1&limit=10
+
+### Listar tareas por filtros
+GET {{baseUrl}}/tareas?estado=pendiente&prioridad=media&page=1&limit=10
+
+### Obtener tarea por ID
+GET {{baseUrl}}/tareas/{{tareaId}}
+
+### Mis tareas
+GET {{baseUrl}}/tareas/usuario/mis-tareas
+Authorization: Bearer {{login.response.body.datos.token}}
+
+### Crear tarea
+# @name crearTarea
+POST {{baseUrl}}/tareas
+Authorization: Bearer {{login.response.body.datos.token}}
+Content-Type: application/json
+
+{
+  "titulo": "Probar backend con REST Client",
+  "descripcion": "Solicitud creada desde api.rest",
+  "estado": "pendiente",
+  "prioridad": "media",
+  "fecha_vencimiento": "2026-06-30",
+  "asignado_id": null
+}
+
+### Obtener tarea creada
+GET {{baseUrl}}/tareas/{{crearTarea.response.body.datos.tarea.id}}
+
+### Actualizar tarea creada
+PUT {{baseUrl}}/tareas/{{crearTarea.response.body.datos.tarea.id}}
+Authorization: Bearer {{login.response.body.datos.token}}
+Content-Type: application/json
+
+{
+  "titulo": "Probar backend con REST Client actualizado",
+  "descripcion": "Solicitud actualizada desde api.rest",
+  "estado": "en_progreso",
+  "prioridad": "alta",
+  "fecha_vencimiento": "2026-07-05",
+  "asignado_id": null
+}
+
+### Eliminar tarea creada
+DELETE {{baseUrl}}/tareas/{{crearTarea.response.body.datos.tarea.id}}
+Authorization: Bearer {{login.response.body.datos.token}}
+
+### Listar usuarios (requiere token de administrador)
+GET {{baseUrl}}/usuarios
+Authorization: Bearer {{login.response.body.datos.token}}
+
+### Obtener usuario por ID
+GET {{baseUrl}}/usuarios/{{usuarioId}}
+Authorization: Bearer {{login.response.body.datos.token}}
+
+### Actualizar usuario
+PUT {{baseUrl}}/usuarios/{{usuarioId}}
+Authorization: Bearer {{login.response.body.datos.token}}
+Content-Type: application/json
+
+{
+  "nombre": "Usuario Demo Actualizado",
+  "email": "demo@gestor.cl"
+}
+
+### Desactivar usuario (requiere token de administrador)
+DELETE {{baseUrl}}/usuarios/{{usuarioId}}
+Authorization: Bearer {{login.response.body.datos.token}}
+
+### ERROR 400 - Registro con datos invalidos
+POST {{baseUrl}}/auth/registro
+Content-Type: application/json
+
+{
+  "nombre": "A",
+  "email": "correo-invalido",
+  "password": "123"
+}
+
+### ERROR 400 - Crear tarea con titulo muy corto
+POST {{baseUrl}}/tareas
+Authorization: Bearer {{login.response.body.datos.token}}
+Content-Type: application/json
+
+{
+  "titulo": "No",
+  "estado": "pendiente",
+  "prioridad": "media"
+}
+
+### ERROR 401 - Perfil sin token
+GET {{baseUrl}}/auth/perfil
+
+### ERROR 401 - Perfil con token invalido
+GET {{baseUrl}}/auth/perfil
+Authorization: Bearer token-invalido
+
+### ERROR 403 - Listar usuarios sin rol administrador
+GET {{baseUrl}}/usuarios
+Authorization: Bearer {{login.response.body.datos.token}}
+
+### ERROR 404 - Ruta inexistente
+GET {{baseUrl}}/ruta-que-no-existe
+
+### ERROR 404 - Tarea inexistente
+GET {{baseUrl}}/tareas/999999
+
+### ERROR 409 - Registro con email ya registrado
+POST {{baseUrl}}/auth/registro
+Content-Type: application/json
+
+{
+  "nombre": "Usuario Repetido",
+  "email": "demo@gestor.cl",
+  "password": "123456",
+  "rol": "usuario"
+}

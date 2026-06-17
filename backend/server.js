@@ -22,6 +22,33 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(morgan('dev'));
 
+// Formatea las respuestas JSON con codigo HTTP y mensaje numerado.
+app.use((req, res, next) => {
+  const jsonOriginal = res.json.bind(res);
+
+  res.json = (body) => {
+    if (body && typeof body === 'object' && typeof body.exito === 'boolean') {
+      const codigo = res.statusCode >= 100 ? res.statusCode : (body.exito ? 200 : 500);
+      const tipoMensaje = body.exito ? 'Exito' : 'Error';
+      const mensajePorDefecto = body.exito ? 'Solicitud procesada correctamente.' : 'Error inesperado.';
+      const mensajeBase = body.mensaje || (Array.isArray(body.errores) ? body.errores.join(' ') : mensajePorDefecto);
+      const prefijo = `${tipoMensaje} ${codigo}:`;
+
+      return jsonOriginal({
+        ...body,
+        codigo,
+        mensaje: mensajeBase.startsWith(prefijo)
+          ? mensajeBase
+          : `${prefijo} ${mensajeBase}`,
+      });
+    }
+
+    return jsonOriginal(body);
+  };
+
+  next();
+});
+
 // ─── Rutas ───────────────────────────────────────────────────────────────────
 app.use('/api/auth', authRoutes);
 app.use('/api/tareas', tareasRoutes);
