@@ -32,9 +32,15 @@ const Usuario = sequelize.define('Usuario', {
     },
   },
   rol: {
-    type: DataTypes.ENUM('administrador', 'usuario'),
+    type: DataTypes.STRING(20),
     defaultValue: 'usuario',
     allowNull: false,
+    validate: {
+      isIn: {
+        args: [['administrador', 'usuario']],
+        msg: 'El rol debe ser administrador o usuario.',
+      },
+    },
   },
   activo: {
     type: DataTypes.BOOLEAN,

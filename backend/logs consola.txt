@@ -1,0 +1,99 @@
+
+> gestor-tareas-backend@1.0.0 dev
+> nodemon server.js
+
+[nodemon] 3.1.14
+[nodemon] to restart at any time, enter `rs`
+[nodemon] watching path(s): *.*
+[nodemon] watching extensions: js,mjs,cjs,json
+[nodemon] starting `node server.js`
+Executing (default): SELECT 1+1 AS result
+Conexion a PostgreSQL establecida correctamente.
+Executing (default): SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'usuarios'
+Executing (default): SELECT t.typname enum_name, array_agg(e.enumlabel ORDER BY enumsortorder) enum_value FROM pg_type t JOIN pg_enum e ON t.oid = e.enumtypid JOIN pg_catalog.pg_namespace n ON n.oid = t.typnamespace WHERE n.nspname = 'public' AND t.typname='enum_usuarios_rol' GROUP BY 1
+Executing (default): DO 'BEGIN CREATE TYPE "public"."enum_usuarios_rol" AS ENUM(''administrador'', ''usuario''); EXCEPTION WHEN duplicate_object THEN null; END';
+Executing (default): WITH ranges AS (  SELECT pg_range.rngtypid, pg_type.typname AS rngtypname,         pg_type.typarray AS rngtyparray, pg_range.rngsubtype    FROM pg_range LEFT OUTER JOIN pg_type ON pg_type.oid = pg_range.rngtypid)SELECT pg_type.typname, pg_type.typtype, pg_type.oid, pg_type.typarray,       ranges.rngtypname, ranges.rngtypid, ranges.rngtyparray  FROM pg_type LEFT OUTER JOIN ranges ON pg_type.oid = ranges.rngsubtype WHERE (pg_type.typtype IN('b', 'e'));
+Executing (default): SELECT pk.constraint_type as "Constraint",c.column_name as "Field", c.column_default as "Default",c.is_nullable as "Null", (CASE WHEN c.udt_name = 'hstore' THEN c.udt_name ELSE c.data_type END) || (CASE WHEN c.character_maximum_length IS NOT NULL THEN '(' || c.character_maximum_length || ')' ELSE '' END) as "Type", (SELECT array_agg(e.enumlabel) FROM pg_catalog.pg_type t JOIN pg_catalog.pg_enum e ON t.oid=e.enumtypid WHERE t.typname=c.udt_name) AS "special", (SELECT pgd.description FROM pg_catalog.pg_statio_all_tables AS st INNER JOIN pg_catalog.pg_description pgd on (pgd.objoid=st.relid) WHERE c.ordinal_position=pgd.objsubid AND c.table_name=st.relname) AS "Comment" FROM information_schema.columns c LEFT JOIN (SELECT tc.table_schema, tc.table_name, cu.column_name, tc.constraint_type FROM information_schema.TABLE_CONSTRAINTS tc JOIN information_schema.KEY_COLUMN_USAGE  cu ON tc.table_schema=cu.table_schema and tc.table_name=cu.table_name and tc.constraint_name=cu.constraint_name and tc.constraint_type='PRIMARY KEY') pk ON pk.table_schema=c.table_schema AND pk.table_name=c.table_name AND pk.column_name=c.column_name WHERE c.table_name = 'usuarios' AND c.table_schema = 'public'
+Executing (default): SELECT DISTINCT tc.constraint_name as constraint_name, tc.constraint_schema as constraint_schema, tc.constraint_catalog as constraint_catalog, tc.table_name as table_name,tc.table_schema as table_schema,tc.table_catalog as table_catalog,tc.initially_deferred as initially_deferred,tc.is_deferrable as is_deferrable,kcu.column_name as column_name,ccu.table_schema  AS referenced_table_schema,ccu.table_catalog  AS referenced_table_catalog,ccu.table_name  AS referenced_table_name,ccu.column_name AS referenced_column_name FROM information_schema.table_constraints AS tc JOIN information_schema.key_column_usage AS kcu ON tc.constraint_name = kcu.constraint_name JOIN information_schema.constraint_column_usage AS ccu ON ccu.constraint_name = tc.constraint_name WHERE constraint_type = 'FOREIGN KEY' AND tc.table_name = 'usuarios' AND tc.table_catalog = 'gestor_tareas'
+Executing (default): ALTER TABLE "usuarios" ALTER COLUMN "nombre" SET NOT NULL;ALTER TABLE "usuarios" ALTER COLUMN "nombre" DROP DEFAULT;ALTER TABLE "usuarios" ALTER COLUMN "nombre" TYPE VARCHAR(100);
+Executing (default): ALTER TABLE "usuarios" ALTER COLUMN "email" SET NOT NULL;ALTER TABLE "usuarios" ALTER COLUMN "email" DROP DEFAULT;ALTER TABLE "usuarios" ALTER COLUMN "email" TYPE VARCHAR(150);
+Executing (default): ALTER TABLE "usuarios" ALTER COLUMN "password" SET NOT NULL;ALTER TABLE "usuarios" ALTER COLUMN "password" DROP DEFAULT;ALTER TABLE "usuarios" ALTER COLUMN "password" TYPE VARCHAR(255);
+Executing (default): ALTER TABLE "usuarios" ALTER COLUMN "rol" SET NOT NULL;ALTER TABLE "usuarios" ALTER COLUMN "rol" SET DEFAULT 'usuario';DO 'BEGIN CREATE TYPE "public"."enum_usuarios_rol" AS ENUM(''administrador'', ''usuario''); EXCEPTION WHEN duplicate_object THEN null; END';ALTER TABLE "usuarios" ALTER COLUMN "rol" TYPE "public"."enum_usuarios_rol" USING ("rol"::"public"."enum_usuarios_rol");
+node:internal/process/promises:394
+    triggerUncaughtException(err, true /* fromPromise */);
+    ^
+
+Error
+    at Query.run (E:\Sence\Curso 1\Modulo 9\gestor-tareas\backend\node_modules\sequelize\lib\dialects\postgres\query.js:50:25)
+    at E:\Sence\Curso 1\Modulo 9\gestor-tareas\backend\node_modules\sequelize\lib\sequelize.js:315:28
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async Usuario.sync (E:\Sence\Curso 1\Modulo 9\gestor-tareas\backend\node_modules\sequelize\lib\model.js:984:11)
+    at async Sequelize.sync (E:\Sence\Curso 1\Modulo 9\gestor-tareas\backend\node_modules\sequelize\lib\sequelize.js:377:9)
+    at async iniciarServidor (E:\Sence\Curso 1\Modulo 9\gestor-tareas\backend\server.js:57:3) {
+  name: 'SequelizeDatabaseError',
+  parent: error: no se puede convertir el tipo rol_usuario a enum_usuarios_rol
+      at parseErrorMessage (E:\Sence\Curso 1\Modulo 9\gestor-tareas\backend\node_modules\pg-protocol\dist\parser.js:305:11)
+      at Parser.handlePacket (E:\Sence\Curso 1\Modulo 9\gestor-tareas\backend\node_modules\pg-protocol\dist\parser.js:143:27)
+      at Parser.parse (E:\Sence\Curso 1\Modulo 9\gestor-tareas\backend\node_modules\pg-protocol\dist\parser.js:37:38)
+      at Socket.<anonymous> (E:\Sence\Curso 1\Modulo 9\gestor-tareas\backend\node_modules\pg-protocol\dist\index.js:11:42)
+      at Socket.emit (node:events:518:28)
+      at addChunk (node:internal/streams/readable:561:12)
+      at readableAddChunkPushByteMode (node:internal/streams/readable:512:3)
+      at Readable.push (node:internal/streams/readable:392:5)
+      at TCP.onStreamRead (node:internal/stream_base_commons:189:23) {
+    length: 133,
+    severity: 'ERROR',
+    code: '42846',
+    detail: undefined,
+    hint: undefined,
+    position: '348',
+    internalPosition: undefined,
+    internalQuery: undefined,
+    where: undefined,
+    schema: undefined,
+    table: undefined,
+    column: undefined,
+    dataType: undefined,
+    constraint: undefined,
+    file: 'parse_expr.c',
+    line: '2787',
+    routine: 'transformTypeCast',
+    sql: `ALTER TABLE "usuarios" ALTER COLUMN "rol" SET NOT NULL;ALTER TABLE "usuarios" ALTER COLUMN "rol" SET DEFAULT 'usuario';DO 'BEGIN CREATE TYPE "public"."enum_usuarios_rol" AS ENUM(''administrador'', ''usuario''); EXCEPTION WHEN duplicate_object THEN null; END';ALTER TABLE "usuarios" ALTER COLUMN "rol" TYPE "public"."enum_usuarios_rol" USING ("rol"::"public"."enum_usuarios_rol");`,
+    parameters: undefined
+  },
+  original: error: no se puede convertir el tipo rol_usuario a enum_usuarios_rol
+      at parseErrorMessage (E:\Sence\Curso 1\Modulo 9\gestor-tareas\backend\node_modules\pg-protocol\dist\parser.js:305:11)
+      at Parser.handlePacket (E:\Sence\Curso 1\Modulo 9\gestor-tareas\backend\node_modules\pg-protocol\dist\parser.js:143:27)
+      at Parser.parse (E:\Sence\Curso 1\Modulo 9\gestor-tareas\backend\node_modules\pg-protocol\dist\parser.js:37:38)
+      at Socket.<anonymous> (E:\Sence\Curso 1\Modulo 9\gestor-tareas\backend\node_modules\pg-protocol\dist\index.js:11:42)
+      at Socket.emit (node:events:518:28)
+      at addChunk (node:internal/streams/readable:561:12)
+      at readableAddChunkPushByteMode (node:internal/streams/readable:512:3)
+      at Readable.push (node:internal/streams/readable:392:5)
+      at TCP.onStreamRead (node:internal/stream_base_commons:189:23) {
+    length: 133,
+    severity: 'ERROR',
+    code: '42846',
+    detail: undefined,
+    hint: undefined,
+    position: '348',
+    internalPosition: undefined,
+    internalQuery: undefined,
+    where: undefined,
+    schema: undefined,
+    table: undefined,
+    column: undefined,
+    dataType: undefined,
+    constraint: undefined,
+    file: 'parse_expr.c',
+    line: '2787',
+    routine: 'transformTypeCast',
+    sql: `ALTER TABLE "usuarios" ALTER COLUMN "rol" SET NOT NULL;ALTER TABLE "usuarios" ALTER COLUMN "rol" SET DEFAULT 'usuario';DO 'BEGIN CREATE TYPE "public"."enum_usuarios_rol" AS ENUM(''administrador'', ''usuario''); EXCEPTION WHEN duplicate_object THEN null; END';ALTER TABLE "usuarios" ALTER COLUMN "rol" TYPE "public"."enum_usuarios_rol" USING ("rol"::"public"."enum_usuarios_rol");`,
+    parameters: undefined
+  },
+  sql: `ALTER TABLE "usuarios" ALTER COLUMN "rol" SET NOT NULL;ALTER TABLE "usuarios" ALTER COLUMN "rol" SET DEFAULT 'usuario';DO 'BEGIN CREATE TYPE "public"."enum_usuarios_rol" AS ENUM(''administrador'', ''usuario''); EXCEPTION WHEN duplicate_object THEN null; END';ALTER TABLE "usuarios" ALTER COLUMN "rol" TYPE "public"."enum_usuarios_rol" USING ("rol"::"public"."enum_usuarios_rol");`,
+  parameters: {}
+}
+
+Node.js v22.16.0
+[nodemon] app crashed - waiting for file changes before starting...

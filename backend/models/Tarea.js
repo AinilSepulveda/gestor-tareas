@@ -20,14 +20,26 @@ const Tarea = sequelize.define('Tarea', {
     allowNull: true,
   },
   estado: {
-    type: DataTypes.ENUM('pendiente', 'en_progreso', 'completada', 'cancelada'),
+    type: DataTypes.STRING(20),
     defaultValue: 'pendiente',
     allowNull: false,
+    validate: {
+      isIn: {
+        args: [['pendiente', 'en_progreso', 'completada', 'cancelada']],
+        msg: 'El estado no es valido.',
+      },
+    },
   },
   prioridad: {
-    type: DataTypes.ENUM('baja', 'media', 'alta', 'urgente'),
+    type: DataTypes.STRING(20),
     defaultValue: 'media',
     allowNull: false,
+    validate: {
+      isIn: {
+        args: [['baja', 'media', 'alta', 'urgente']],
+        msg: 'La prioridad no es valida.',
+      },
+    },
   },
   fecha_vencimiento: {
     type: DataTypes.DATEONLY,
