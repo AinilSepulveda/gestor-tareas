@@ -19,10 +19,6 @@ const Tarea = sequelize.define('Tarea', {
     type: DataTypes.TEXT,
     allowNull: true,
   },
-  notas: {
-    type: DataTypes.TEXT,
-    allowNull: true,
-  },
   estado: {
     type: DataTypes.STRING(20),
     defaultValue: 'pendiente',

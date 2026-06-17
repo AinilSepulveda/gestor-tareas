@@ -7,14 +7,11 @@ const {
 const { autenticar } = require('../middlewares/autenticacion');
 const { validarCrearTarea, validarActualizarTarea } = require('../middlewares/validaciones');
 
-// Rutas públicas (dashboard)
 router.get('/', listarTareas);
-router.get('/:id', obtenerTarea);
-
-// Rutas protegidas
 router.get('/usuario/mis-tareas', autenticar, misTareas);
 router.post('/', autenticar, validarCrearTarea, crearTarea);
 router.put('/:id', autenticar, validarActualizarTarea, actualizarTarea);
 router.delete('/:id', autenticar, eliminarTarea);
+router.get('/:id', obtenerTarea);
 
 module.exports = router;

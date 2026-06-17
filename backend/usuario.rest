@@ -1,0 +1,126 @@
+@host = http://localhost:3000
+@baseUrl = {{host}}/api
+
+# Copia aqui el ID del usuario que devuelve "Perfil usuario".
+@usuarioId = 1
+# Copia aqui el ID de una tarea asignada a este usuario.
+@tareaId = 12
+# Copia aqui el ID de una nota creada por este usuario si quieres editar/eliminar.
+@notaId = 12
+# Opcional: pega un token manual si tu REST Client no resuelve loginUsuario.response.
+@tokenUsuario =
+
+### Registrar usuario
+# @name registroUsuario
+POST {{baseUrl}}/auth/registro
+Content-Type: application/json
+
+{
+  "nombre": "Usuario Demo",
+  "email": "demo@gestor.cl",
+  "password": "123456",
+  "rol": "usuario"
+}
+
+### Login usuario
+# @name loginUsuario
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "demo@gestor.cl",
+  "password": "123456"
+}
+
+### Perfil usuario
+GET {{baseUrl}}/auth/perfil
+Authorization: Bearer {{loginUsuario.response.body.$.datos.token}}
+
+### Perfil usuario con token manual
+GET {{baseUrl}}/auth/perfil
+Authorization: Bearer {{tokenUsuario}}
+
+### Mis tareas
+GET {{baseUrl}}/tareas/usuario/mis-tareas
+Authorization: Bearer {{loginUsuario.response.body.$.datos.token}}
+
+### Cambiar estado de tarea asignada
+PUT {{baseUrl}}/tareas/{{tareaId}}
+Authorization: Bearer {{loginUsuario.response.body.$.datos.token}}
+Content-Type: application/json
+
+{
+  "estado": "revision"
+}
+
+### Cambiar estado con token manual
+PUT {{baseUrl}}/tareas/{{tareaId}}
+Authorization: Bearer {{tokenUsuario}}
+Content-Type: application/json
+
+{
+  "estado": "revision"
+}
+
+### Crear nota en tarea asignada
+# @name crearNotaUsuario
+POST {{baseUrl}}/notas/tarea/{{tareaId}}
+Authorization: Bearer {{loginUsuario.response.body.$.datos.token}}
+Content-Type: application/json
+
+{
+  "texto": "Surgio un imprevisto y se deja la tarea en revision."
+}
+
+### Crear nota con token manual
+POST {{baseUrl}}/notas/tarea/{{tareaId}}
+Authorization: Bearer {{tokenUsuario}}
+Content-Type: application/json
+
+{
+  "texto": "Surgio un imprevisto y se deja la tarea en revision."
+}
+
+### Actualizar nota propia
+PUT {{baseUrl}}/notas/{{notaId}}
+Authorization: Bearer {{loginUsuario.response.body.$.datos.token}}
+Content-Type: application/json
+
+{
+  "texto": "Nota actualizada por usuario."
+}
+
+### Eliminar nota propia
+DELETE {{baseUrl}}/notas/{{notaId}}
+Authorization: Bearer {{loginUsuario.response.body.$.datos.token}}
+
+### ERROR 403 - Usuario intentando crear tarea
+POST {{baseUrl}}/tareas
+Authorization: Bearer {{loginUsuario.response.body.$.datos.token}}
+Content-Type: application/json
+
+{
+  "titulo": "Intento de crear tarea como usuario",
+  "descripcion": "Esto debe fallar porque solo admin crea tareas",
+  "prioridad": "media",
+  "asignado_id": {{usuarioId}}
+}
+
+### ERROR 403 - Usuario intentando editar contenido de tarea
+PUT {{baseUrl}}/tareas/{{tareaId}}
+Authorization: Bearer {{loginUsuario.response.body.$.datos.token}}
+Content-Type: application/json
+
+{
+  "descripcion": "Esto debe fallar porque el usuario solo cambia estado."
+}
+
+### ERROR 400 - Usuario intentando guardar notas dentro de tarea
+PUT {{baseUrl}}/tareas/{{tareaId}}
+Authorization: Bearer {{loginUsuario.response.body.$.datos.token}}
+Content-Type: application/json
+
+{
+  "estado": "revision",
+  "notas": "Esto debe fallar porque las notas usan /api/notas/tarea/:tareaId."
+}

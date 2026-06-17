@@ -8,6 +8,7 @@ require('./models'); // Inicializa las asociaciones
 const authRoutes = require('./routes/authRoutes');
 const tareasRoutes = require('./routes/tareasRoutes');
 const usuariosRoutes = require('./routes/usuariosRoutes');
+const notasRoutes = require('./routes/notasRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -53,6 +54,7 @@ app.use((req, res, next) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/tareas', tareasRoutes);
 app.use('/api/usuarios', usuariosRoutes);
+app.use('/api/notas', notasRoutes);
 
 // Ruta raíz informativa
 app.get('/', (req, res) => {
@@ -63,6 +65,7 @@ app.get('/', (req, res) => {
       auth: '/api/auth',
       tareas: '/api/tareas',
       usuarios: '/api/usuarios',
+      notas: '/api/notas',
     },
   });
 });

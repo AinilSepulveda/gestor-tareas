@@ -1,0 +1,132 @@
+@host = http://localhost:3000
+@baseUrl = {{host}}/api
+
+# Cambia @usuarioId por el ID del usuario al que se asignara la tarea.
+@usuarioId = 1
+# Copia aqui el ID de la tarea creada o existente.
+@tareaId = 16
+# Copia aqui el ID de una nota si quieres editar/eliminar.
+@notaId = 1
+@usuarioDesactivarId = 999999
+# Opcional: pega un token manual si tu REST Client no resuelve loginAdmin.response.
+@tokenAdmin =
+
+### Registrar administrador
+# @name registroAdmin
+POST {{baseUrl}}/auth/registro
+Content-Type: application/json
+
+{
+  "nombre": "Admin Demo",
+  "email": "admin.demo@gestor.cl",
+  "password": "123456",
+  "rol": "administrador"
+}
+
+### Login administrador
+# @name loginAdmin
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "admin.demo@gestor.cl",
+  "password": "123456"
+}
+
+### Perfil administrador
+GET {{baseUrl}}/auth/perfil
+Authorization: Bearer {{loginAdmin.response.body.$.datos.token}}
+
+### Listar usuarios
+GET {{baseUrl}}/usuarios
+Authorization: Bearer {{loginAdmin.response.body.$.datos.token}}
+
+### Obtener usuario por ID
+GET {{baseUrl}}/usuarios/{{usuarioId}}
+Authorization: Bearer {{loginAdmin.response.body.$.datos.token}}
+
+### Crear tarea asignada
+# @name crearTareaAdmin
+POST {{baseUrl}}/tareas
+Authorization: Bearer {{loginAdmin.response.body.$.datos.token}}
+Content-Type: application/json
+
+{
+  "titulo": "Revisar avance del modulo",
+  "descripcion": "Tarea creada por admin y asignada a un usuario",
+  "prioridad": "media",
+  "fecha_vencimiento": "2026-06-30",
+  "asignado_id": {{usuarioId}}
+}
+
+### Asignar tarea existente a usuario
+PUT {{baseUrl}}/tareas/{{tareaId}}
+Authorization: Bearer {{loginAdmin.response.body.$.datos.token}}
+Content-Type: application/json
+
+{
+  "asignado_id": {{usuarioId}}
+}
+
+### Editar contenido de tarea
+PUT {{baseUrl}}/tareas/{{tareaId}}
+Authorization: Bearer {{loginAdmin.response.body.$.datos.token}}
+Content-Type: application/json
+
+{
+  "titulo": "Revisar avance del modulo actualizado",
+  "descripcion": "Contenido editado por admin",
+  "prioridad": "alta",
+  "fecha_vencimiento": "2026-07-05",
+  "asignado_id": {{usuarioId}}
+}
+
+### Cambiar estado de tarea
+PUT {{baseUrl}}/tareas/{{tareaId}}
+Authorization: Bearer {{loginAdmin.response.body.$.datos.token}}
+Content-Type: application/json
+
+{
+  "estado": "completada"
+}
+
+### Crear nota como admin
+# @name crearNotaAdmin
+POST {{baseUrl}}/notas/tarea/{{tareaId}}
+Authorization: Bearer {{loginAdmin.response.body.$.datos.token}}
+Content-Type: application/json
+
+{
+  "texto": "Admin agrega una observacion para la tarea."
+}
+
+### Actualizar nota como admin
+PUT {{baseUrl}}/notas/{{notaId}}
+Authorization: Bearer {{loginAdmin.response.body.$.datos.token}}
+Content-Type: application/json
+
+{
+  "texto": "Nota actualizada por admin."
+}
+
+### Eliminar nota como admin
+DELETE {{baseUrl}}/notas/{{notaId}}
+Authorization: Bearer {{loginAdmin.response.body.$.datos.token}}
+
+### Eliminar tarea
+DELETE {{baseUrl}}/tareas/{{tareaId}}
+Authorization: Bearer {{loginAdmin.response.body.$.datos.token}}
+
+### Desactivar usuario
+DELETE {{baseUrl}}/usuarios/{{usuarioDesactivarId}}
+Authorization: Bearer {{loginAdmin.response.body.$.datos.token}}
+
+### ERROR 400 - Intentar guardar notas dentro de tarea
+PUT {{baseUrl}}/tareas/{{tareaId}}
+Authorization: Bearer {{loginAdmin.response.body.$.datos.token}}
+Content-Type: application/json
+
+{
+  "estado": "revision",
+  "notas": "Esto debe fallar porque las notas usan /api/notas/tarea/:tareaId."
+}

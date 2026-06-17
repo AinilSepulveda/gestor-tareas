@@ -34,7 +34,6 @@ CREATE TABLE tareas (
   id                 SERIAL           PRIMARY KEY,
   titulo             VARCHAR(200)     NOT NULL CHECK (length(trim(titulo)) >= 3),
   descripcion        TEXT,
-  notas              TEXT,
   estado             estado_tarea     NOT NULL DEFAULT 'pendiente',
   prioridad          prioridad_tarea  NOT NULL DEFAULT 'media',
   fecha_vencimiento  DATE,
@@ -44,11 +43,22 @@ CREATE TABLE tareas (
   "updatedAt"        TIMESTAMPTZ      NOT NULL DEFAULT NOW()
 );
 
+CREATE TABLE notas (
+  id                 SERIAL           PRIMARY KEY,
+  texto              TEXT             NOT NULL CHECK (length(trim(texto)) >= 1),
+  tarea_id           INT              NOT NULL REFERENCES tareas(id) ON DELETE CASCADE,
+  usuario_id         INT              NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+  "createdAt"        TIMESTAMPTZ      NOT NULL DEFAULT NOW(),
+  "updatedAt"        TIMESTAMPTZ      NOT NULL DEFAULT NOW()
+);
+
 -- Índices para mejorar rendimiento en consultas frecuentes
 CREATE INDEX idx_tareas_estado      ON tareas(estado);
 CREATE INDEX idx_tareas_prioridad   ON tareas(prioridad);
 CREATE INDEX idx_tareas_creador     ON tareas(creador_id);
 CREATE INDEX idx_tareas_asignado    ON tareas(asignado_id);
+CREATE INDEX idx_notas_tarea        ON notas(tarea_id);
+CREATE INDEX idx_notas_usuario      ON notas(usuario_id);
 
 -- ─── DML: Consultas de ejemplo (Módulo 5) ────────────────────────────────────
 
@@ -66,6 +76,11 @@ VALUES
   ('Diseñar maqueta del dashboard', 'Incluir gráficos y tabla de tareas', 'en_progreso', 'alta', 1, 2),
   ('Configurar base de datos', 'Crear tablas y relaciones en PostgreSQL', 'completada', 'urgente', 1, 1),
   ('Implementar autenticación JWT', 'Login, registro y rutas protegidas', 'pendiente', 'alta', 1, 3);
+
+INSERT INTO notas (texto, tarea_id, usuario_id, "createdAt", "updatedAt")
+VALUES
+  ('Surgio un imprevisto con los graficos del dashboard.', 1, 2, NOW(), NOW()),
+  ('Se deja evidencia de avance para revision.', 1, 1, NOW(), NOW());
 
 -- Consultar todas las tareas con sus usuarios (JOIN)
 SELECT

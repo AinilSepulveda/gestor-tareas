@@ -1,4 +1,4 @@
-const { Tarea, Usuario } = require('../models');
+const { Tarea, Usuario, Nota } = require('../models');
 const { Op } = require('sequelize');
 
 const atributosUsuario = ['id', 'nombre', 'email', 'rol'];
@@ -8,6 +8,15 @@ const incluirUsuarios = [
   { model: Usuario, as: 'asignado', attributes: atributosUsuario },
 ];
 
+const incluirDetalleTarea = [
+  ...incluirUsuarios,
+  {
+    model: Nota,
+    as: 'notas',
+    include: [{ model: Usuario, as: 'autor', attributes: atributosUsuario }],
+  },
+];
+
 const textoOpcional = (valor) => {
   if (valor === undefined) return undefined;
   if (valor === null || valor === '') return null;
@@ -15,6 +24,20 @@ const textoOpcional = (valor) => {
 
   const limpio = valor.trim();
   return limpio === '' ? null : limpio;
+};
+
+const obtenerIdTarea = (req, res) => {
+  const id = Number(req.params.id);
+
+  if (!Number.isInteger(id) || id <= 0) {
+    res.status(400).json({
+      exito: false,
+      mensaje: 'El ID de la tarea debe ser numerico.',
+    });
+    return null;
+  }
+
+  return id;
 };
 
 const listarTareas = async (req, res) => {
@@ -56,8 +79,11 @@ const listarTareas = async (req, res) => {
 
 const obtenerTarea = async (req, res) => {
   try {
-    const tarea = await Tarea.findByPk(req.params.id, {
-      include: incluirUsuarios,
+    const id = obtenerIdTarea(req, res);
+    if (!id) return;
+
+    const tarea = await Tarea.findByPk(id, {
+      include: incluirDetalleTarea,
     });
 
     if (!tarea) {
@@ -100,7 +126,6 @@ const crearTarea = async (req, res) => {
     const nuevaTarea = await Tarea.create({
       titulo: titulo.trim(),
       descripcion: textoOpcional(descripcion) || null,
-      notas: null,
       estado: 'pendiente',
       prioridad: prioridad || 'media',
       fecha_vencimiento: fecha_vencimiento || null,
@@ -109,7 +134,7 @@ const crearTarea = async (req, res) => {
     });
 
     const tareaCompleta = await Tarea.findByPk(nuevaTarea.id, {
-      include: incluirUsuarios,
+      include: incluirDetalleTarea,
     });
 
     return res.status(201).json({
@@ -127,86 +152,125 @@ const crearTarea = async (req, res) => {
   }
 };
 
+const prepararCambiosAdmin = async (body) => {
+  const { titulo, descripcion, estado, prioridad, fecha_vencimiento, asignado_id, notas } = body;
+
+  if (notas !== undefined) {
+    return {
+      error: {
+        codigo: 400,
+        mensaje: 'Las notas se gestionan en /api/notas/tarea/:tareaId.',
+      },
+    };
+  }
+
+  const cambios = {};
+
+  if (titulo !== undefined) cambios.titulo = titulo.trim();
+  if (descripcion !== undefined) cambios.descripcion = textoOpcional(descripcion);
+  if (estado !== undefined) cambios.estado = estado;
+  if (prioridad !== undefined) cambios.prioridad = prioridad;
+  if (fecha_vencimiento !== undefined) cambios.fecha_vencimiento = fecha_vencimiento || null;
+
+  if (asignado_id !== undefined) {
+    if (asignado_id !== null) {
+      const asignado = await Usuario.findByPk(asignado_id);
+      if (!asignado || !asignado.activo) {
+        return {
+          error: {
+            codigo: 400,
+            mensaje: 'El usuario asignado no existe o esta inactivo.',
+          },
+        };
+      }
+    }
+
+    cambios.asignado_id = asignado_id;
+  }
+
+  if (Object.keys(cambios).length === 0) {
+    return {
+      error: {
+        codigo: 400,
+        mensaje: 'El administrador debe enviar al menos un campo para actualizar.',
+      },
+    };
+  }
+
+  return { cambios };
+};
+
+const prepararCambiosUsuario = (body) => {
+  const { titulo, descripcion, estado, prioridad, fecha_vencimiento, asignado_id, notas } = body;
+
+  if (notas !== undefined) {
+    return {
+      error: {
+        codigo: 400,
+        mensaje: 'Las notas se gestionan en /api/notas/tarea/:tareaId.',
+      },
+    };
+  }
+
+  if (titulo !== undefined || descripcion !== undefined || prioridad !== undefined || fecha_vencimiento !== undefined || asignado_id !== undefined) {
+    return {
+      error: {
+        codigo: 403,
+        mensaje: 'Solo un administrador puede editar el contenido o la asignacion de la tarea.',
+      },
+    };
+  }
+
+  if (estado === undefined) {
+    return {
+      error: {
+        codigo: 400,
+        mensaje: 'Debe enviar estado para actualizar la tarea.',
+      },
+    };
+  }
+
+  return { cambios: { estado } };
+};
+
 const actualizarTarea = async (req, res) => {
   try {
-    const tarea = await Tarea.findByPk(req.params.id);
+    const id = obtenerIdTarea(req, res);
+    if (!id) return;
+
+    const tarea = await Tarea.findByPk(id);
 
     if (!tarea) {
       return res.status(404).json({ exito: false, mensaje: 'Tarea no encontrada.' });
     }
 
-    const { titulo, descripcion, estado, prioridad, fecha_vencimiento, asignado_id, notas } = req.body;
     const esAdmin = req.usuario.rol === 'administrador';
     const esAsignado = tarea.asignado_id === req.usuario.id;
 
-    if (esAdmin) {
-      if (estado !== undefined || notas !== undefined) {
-        return res.status(403).json({
-          exito: false,
-          mensaje: 'El estado y las notas las actualiza el usuario asignado.',
-        });
-      }
-
-      const cambiosAdmin = {};
-
-      if (titulo !== undefined) cambiosAdmin.titulo = titulo.trim();
-      if (descripcion !== undefined) cambiosAdmin.descripcion = textoOpcional(descripcion);
-      if (prioridad !== undefined) cambiosAdmin.prioridad = prioridad;
-      if (fecha_vencimiento !== undefined) cambiosAdmin.fecha_vencimiento = fecha_vencimiento || null;
-
-      if (asignado_id !== undefined) {
-        if (asignado_id !== null) {
-          const asignado = await Usuario.findByPk(asignado_id);
-          if (!asignado || !asignado.activo) {
-            return res.status(400).json({
-              exito: false,
-              mensaje: 'El usuario asignado no existe o esta inactivo.',
-            });
-          }
-        }
-
-        cambiosAdmin.asignado_id = asignado_id;
-      }
-
-      if (Object.keys(cambiosAdmin).length === 0) {
-        return res.status(400).json({
-          exito: false,
-          mensaje: 'El administrador debe enviar contenido o asignacion para actualizar.',
-        });
-      }
-
-      await tarea.update(cambiosAdmin);
-    } else {
+    if (!esAdmin) {
       if (!esAsignado) {
         return res.status(403).json({
           exito: false,
-          mensaje: 'Solo el usuario asignado puede mover el estado o agregar notas a esta tarea.',
+          mensaje: 'Solo el usuario asignado puede mover el estado de esta tarea.',
         });
       }
-
-      if (titulo !== undefined || descripcion !== undefined || prioridad !== undefined || fecha_vencimiento !== undefined || asignado_id !== undefined) {
-        return res.status(403).json({
-          exito: false,
-          mensaje: 'Solo un administrador puede editar el contenido o la asignacion de la tarea.',
-        });
-      }
-
-      const cambiosUsuario = {};
-      if (estado !== undefined) cambiosUsuario.estado = estado;
-      if (notas !== undefined) cambiosUsuario.notas = textoOpcional(notas);
-
-      if (Object.keys(cambiosUsuario).length === 0) {
-        return res.status(400).json({
-          exito: false,
-          mensaje: 'Debe enviar estado o notas para actualizar la tarea.',
-        });
-      }
-
-      await tarea.update(cambiosUsuario);
     }
 
+    const resultado = esAdmin
+      ? await prepararCambiosAdmin(req.body)
+      : prepararCambiosUsuario(req.body);
+
+    if (resultado.error) {
+      return res.status(resultado.error.codigo).json({
+        exito: false,
+        mensaje: resultado.error.mensaje,
+      });
+    }
+
+    await tarea.update(resultado.cambios);
+
     const tareaActualizada = await Tarea.findByPk(tarea.id, {
-      include: incluirUsuarios,
+      include: incluirDetalleTarea,
     });
 
     return res.status(200).json({
@@ -226,7 +290,10 @@ const actualizarTarea = async (req, res) => {
 
 const eliminarTarea = async (req, res) => {
   try {
-    const tarea = await Tarea.findByPk(req.params.id);
+    const id = obtenerIdTarea(req, res);
+    if (!id) return;
+
+    const tarea = await Tarea.findByPk(id);
 
     if (!tarea) {
       return res.status(404).json({ exito: false, mensaje: 'Tarea no encontrada.' });

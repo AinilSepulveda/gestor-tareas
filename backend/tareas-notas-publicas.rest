@@ -1,0 +1,41 @@
+@host = http://localhost:3000
+@baseUrl = {{host}}/api
+
+@tareaId = 1
+@notaId = 1
+
+### API raiz
+GET {{host}}/
+
+### Listar tareas publicas
+GET {{baseUrl}}/tareas?page=1&limit=10
+
+### Listar tareas por estado
+GET {{baseUrl}}/tareas?estado=revision&page=1&limit=10
+
+### Listar tareas por prioridad
+GET {{baseUrl}}/tareas?prioridad=alta&page=1&limit=10
+
+### Listar tareas por usuario asignado
+GET {{baseUrl}}/tareas?asignado_id=1&page=1&limit=10
+
+### Obtener tarea publica por ID
+GET {{baseUrl}}/tareas/{{tareaId}}
+
+### Listar notas publicas de una tarea
+GET {{baseUrl}}/notas/tarea/{{tareaId}}
+
+### Obtener nota publica por ID
+GET {{baseUrl}}/notas/{{notaId}}
+
+### ERROR 404 - Tarea inexistente
+GET {{baseUrl}}/tareas/999999
+
+### ERROR 404 - Nota inexistente
+GET {{baseUrl}}/notas/999999
+
+### ERROR 400 - ID de tarea no numerico
+GET {{baseUrl}}/tareas/no-es-numero
+
+### ERROR 400 - ID de nota no numerico
+GET {{baseUrl}}/notas/no-es-numero
